@@ -382,6 +382,7 @@ const DashboardPage = () => {
               </div>
 
             </div>
+            </div>
           )}
           {activeTab === 'marches' && <MarchesContent />}
         </div>
