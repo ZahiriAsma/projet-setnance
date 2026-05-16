@@ -4,6 +4,7 @@ import {
   Search, Bell, FileSpreadsheet, AlertTriangle, ArrowRight, ChevronRight, Clock, AlertCircle, TrendingUp
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import MarchesContent from './MarchesContent';
 
 const DashboardPage = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -200,10 +201,11 @@ const DashboardPage = () => {
         </header>
 
         {/* Dashboard Body */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '32px' }}>
-          <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-            
-            {/* Welcome Banner */}
+        <div style={{ flex: 1, overflowY: 'auto' }}>
+          {activeTab === 'dashboard' && (
+            <div style={{ padding: '32px', maxWidth: '1200px', margin: '0 auto' }}>
+              
+              {/* Welcome Banner */}
             <div style={{ 
               background: 'linear-gradient(135deg, #0f766e 0%, #10b981 100%)', 
               borderRadius: '16px', padding: '28px 32px', color: 'white',
@@ -380,7 +382,8 @@ const DashboardPage = () => {
               </div>
 
             </div>
-          </div>
+          )}
+          {activeTab === 'marches' && <MarchesContent />}
         </div>
       </main>
     </div>
