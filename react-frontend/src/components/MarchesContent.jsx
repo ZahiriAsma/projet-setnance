@@ -24,7 +24,8 @@ const MarchesContent = () => {
       setMarches(response.data);
       setLoading(false);
     } catch (error) {
-      console.error('Erreur de chargement', error);
+      console.error('Erreur de chargement', error.response || error);
+      alert("Erreur de chargement des marchés: " + (error.response?.data?.message || error.message));
       setLoading(false);
     }
   };
@@ -42,8 +43,8 @@ const MarchesContent = () => {
       setFormData({ titulaire: '', id_fournisseur: '', date_debut: '', date_fin: '' });
       fetchMarches(); // Refresh
     } catch (error) {
-      console.error('Erreur lors de l\'ajout', error);
-      alert("Erreur lors de l'enregistrement. Veuillez vérifier vos informations ou vous reconnecter.");
+      console.error('Erreur lors de l\'ajout', error.response || error);
+      alert("Erreur: " + (error.response?.data?.message || error.message));
     } finally {
       setSubmitting(false);
     }
