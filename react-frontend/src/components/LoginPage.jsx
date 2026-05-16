@@ -52,7 +52,7 @@ const ForgotModal = ({ onClose }) => {
             padding: '24px', backdropFilter: 'blur(6px)',
         }}>
             <div style={{
-                backgroundImage: `linear-gradient(rgba(15, 23, 42, 0.9), rgba(15, 23, 42, 0.9)), url(${cardBg})`,
+                backgroundImage: `linear-gradient(rgba(15, 23, 42, 0.4), rgba(15, 23, 42, 0.4)), url(${cardBg})`,
                 backgroundSize: 'cover',
                 backgroundPosition: 'center',
                 border: '1px solid rgba(255,255,255,0.1)',
@@ -288,7 +288,7 @@ const LoginPage = () => {
                     {/* ── RIGHT: LOGIN CARD ── */}
                     <div style={{
                         width: '100%', maxWidth: '400px',
-                        backgroundImage: `linear-gradient(rgba(15, 23, 42, 0.85), rgba(15, 23, 42, 0.85)), url(${cardBg})`,
+                        backgroundImage: `linear-gradient(rgba(15, 23, 42, 0.4), rgba(15, 23, 42, 0.4)), url(${cardBg})`,
                         backgroundSize: 'cover',
                         backgroundPosition: 'center',
                         border: '1px solid rgba(255,255,255,0.1)',
