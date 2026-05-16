@@ -52,9 +52,7 @@ const ForgotModal = ({ onClose }) => {
             padding: '24px', backdropFilter: 'blur(6px)',
         }}>
             <div style={{
-                backgroundImage: `linear-gradient(rgba(15, 23, 42, 0.4), rgba(15, 23, 42, 0.4)), url(${cardBg})`,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
+                background: '#1e293b',
                 border: '1px solid rgba(255,255,255,0.1)',
                 borderRadius: '24px', padding: '36px 32px',
                 width: '100%', maxWidth: '420px',
@@ -233,7 +231,10 @@ const LoginPage = () => {
 
             <div style={{
                 minHeight: '100vh', width: '100%',
-                background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 40%, #0f172a 70%, #020617 100%)',
+                backgroundImage: `linear-gradient(rgba(2, 6, 23, 0.7), rgba(2, 6, 23, 0.7)), url(${cardBg})`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                backgroundAttachment: 'fixed',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontFamily: "'Inter', 'Segoe UI', sans-serif",
                 padding: '24px', boxSizing: 'border-box',
@@ -288,13 +289,11 @@ const LoginPage = () => {
                     {/* ── RIGHT: LOGIN CARD ── */}
                     <div style={{
                         width: '100%', maxWidth: '400px',
-                        backgroundImage: `linear-gradient(rgba(15, 23, 42, 0.4), rgba(15, 23, 42, 0.4)), url(${cardBg})`,
-                        backgroundSize: 'cover',
-                        backgroundPosition: 'center',
+                        background: 'rgba(30, 41, 59, 0.7)',
                         border: '1px solid rgba(255,255,255,0.1)',
                         borderRadius: '24px', padding: '40px 36px',
                         boxSizing: 'border-box',
-                        backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)',
+                        backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
                         flexShrink: 0,
                         boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
                     }}>
