@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Mail, Lock, Eye, EyeOff, Loader2, LayoutDashboard, BarChart3, BellRing, ClipboardCheck, LogIn, X, CheckCircle, ArrowLeft } from 'lucide-react';
 import api from '../api/axios';
 import logo from '../assets/logo.png';
+import cardBg from '../assets/login_bg.png';
 
 /* ─────────────── Shared Styles ─────────────── */
 const inputStyle = (focused) => ({
@@ -51,11 +52,14 @@ const ForgotModal = ({ onClose }) => {
             padding: '24px', backdropFilter: 'blur(6px)',
         }}>
             <div style={{
-                background: '#1e293b',
+                backgroundImage: `linear-gradient(rgba(15, 23, 42, 0.9), rgba(15, 23, 42, 0.9)), url(${cardBg})`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
                 border: '1px solid rgba(255,255,255,0.1)',
                 borderRadius: '24px', padding: '36px 32px',
                 width: '100%', maxWidth: '420px',
                 boxSizing: 'border-box', position: 'relative',
+                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
             }}>
                 <button onClick={onClose} style={{
                     position: 'absolute', top: '16px', right: '16px',
@@ -284,12 +288,15 @@ const LoginPage = () => {
                     {/* ── RIGHT: LOGIN CARD ── */}
                     <div style={{
                         width: '100%', maxWidth: '400px',
-                        background: 'rgba(255,255,255,0.06)',
+                        backgroundImage: `linear-gradient(rgba(15, 23, 42, 0.85), rgba(15, 23, 42, 0.85)), url(${cardBg})`,
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center',
                         border: '1px solid rgba(255,255,255,0.1)',
                         borderRadius: '24px', padding: '40px 36px',
                         boxSizing: 'border-box',
-                        backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
+                        backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)',
                         flexShrink: 0,
+                        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
                     }}>
                         <div style={{ marginBottom: '32px' }}>
                             <h2 style={{ color: 'white', fontSize: '26px', fontWeight: '700', margin: '0 0 8px 0' }}>
