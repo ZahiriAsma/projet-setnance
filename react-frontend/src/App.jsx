@@ -1,6 +1,7 @@
 import React from 'react';
 import LoginPage from './components/LoginPage';
 import ResetPasswordPage from './components/ResetPasswordPage';
+import DashboardPage from './components/DashboardPage';
 
 function App() {
   const path = window.location.pathname;
@@ -10,46 +11,7 @@ function App() {
   }
 
   if (path === '/dashboard') {
-    const user = JSON.parse(localStorage.getItem('user') || sessionStorage.getItem('user') || '{}');
-    return (
-      <div style={{
-        minHeight: '100vh',
-        background: 'linear-gradient(135deg, #0f172a 0%, #020617 100%)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontFamily: "'Inter', 'Segoe UI', sans-serif", color: 'white',
-      }}>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{
-            fontSize: '48px', marginBottom: '16px',
-            width: '80px', height: '80px', margin: '0 auto 20px',
-            background: 'linear-gradient(135deg, #2563eb, #1d4ed8)',
-            borderRadius: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}>📦</div>
-          <h1 style={{ fontSize: '28px', fontWeight: '700', margin: '0 0 8px' }}>Tableau de Bord</h1>
-          <p style={{ color: 'rgba(255,255,255,0.5)', margin: '0 0 28px' }}>
-            Bienvenue, <span style={{ color: '#3b82f6' }}>{user?.name || 'Utilisateur'}</span>
-          </p>
-          <button
-            onClick={() => {
-              localStorage.removeItem('auth_token');
-              localStorage.removeItem('user');
-              sessionStorage.removeItem('auth_token');
-              sessionStorage.removeItem('user');
-              window.location.href = '/';
-            }}
-            style={{
-              background: 'rgba(239,68,68,0.15)',
-              border: '1px solid rgba(239,68,68,0.4)',
-              borderRadius: '12px', padding: '10px 24px',
-              color: '#fca5a5', fontWeight: '600',
-              cursor: 'pointer', fontSize: '14px',
-            }}
-          >
-            Déconnexion
-          </button>
-        </div>
-      </div>
-    );
+    return <DashboardPage />;
   }
 
   return <LoginPage />;
