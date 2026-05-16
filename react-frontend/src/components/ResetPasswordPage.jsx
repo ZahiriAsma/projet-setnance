@@ -6,7 +6,7 @@ import logo from '../assets/logo.png';
 const inputStyle = (focused) => ({
     width: '100%', boxSizing: 'border-box',
     background: 'rgba(255,255,255,0.05)',
-    border: `1px solid ${focused ? '#14b8a6' : 'rgba(255,255,255,0.1)'}`,
+    border: `1px solid ${focused ? '#2563eb' : 'rgba(255,255,255,0.1)'}`,
     borderRadius: '12px',
     padding: '13px 14px 13px 44px',
     color: 'white', fontSize: '14px', outline: 'none',
@@ -39,7 +39,7 @@ const ResetPasswordPage = () => {
         if (pwd.length === 0) return { level: 0, label: '', color: 'transparent' };
         if (pwd.length < 6) return { level: 1, label: 'Trop court', color: '#ef4444' };
         if (pwd.length < 8 || !/[0-9]/.test(pwd)) return { level: 2, label: 'Moyen', color: '#f59e0b' };
-        if (/[A-Z]/.test(pwd) && /[0-9]/.test(pwd) && pwd.length >= 8) return { level: 3, label: 'Fort', color: '#14b8a6' };
+        if (/[A-Z]/.test(pwd) && /[0-9]/.test(pwd) && pwd.length >= 8) return { level: 3, label: 'Fort', color: '#2563eb' };
         return { level: 2, label: 'Moyen', color: '#f59e0b' };
     };
     const strength = getStrength(password);
@@ -77,7 +77,7 @@ const ResetPasswordPage = () => {
     return (
         <div style={{
             minHeight: '100vh', width: '100%',
-            background: 'linear-gradient(135deg, #0d2b2b 0%, #0a2020 40%, #081a1a 70%, #061515 100%)',
+            background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 40%, #0f172a 70%, #020617 100%)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             fontFamily: "'Inter', 'Segoe UI', sans-serif",
             padding: '24px', boxSizing: 'border-box',
@@ -87,7 +87,7 @@ const ResetPasswordPage = () => {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '32px', justifyContent: 'center' }}>
                     <div style={{
                         width: '44px', height: '44px',
-                        background: 'linear-gradient(135deg, #14b8a6, #0d9488)',
+                        background: 'linear-gradient(135deg, #2563eb, #1d4ed8)',
                         borderRadius: '12px',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                     }}>
@@ -95,7 +95,7 @@ const ResetPasswordPage = () => {
                     </div>
                     <div>
                         <div style={{ fontSize: '18px', fontWeight: '700', color: 'white' }}>InterNat Stock</div>
-                        <div style={{ fontSize: '10px', color: '#2dd4bf', fontWeight: '600', letterSpacing: '0.12em', textTransform: 'uppercase' }}>OFPPT · SYSTÈME DE GESTION</div>
+                        <div style={{ fontSize: '10px', color: '#3b82f6', fontWeight: '600', letterSpacing: '0.12em', textTransform: 'uppercase' }}>OFPPT · SYSTÈME DE GESTION</div>
                     </div>
                 </div>
 
@@ -112,11 +112,11 @@ const ResetPasswordPage = () => {
                         <div style={{ textAlign: 'center', padding: '8px 0' }}>
                             <div style={{
                                 width: '68px', height: '68px', margin: '0 auto 20px',
-                                background: 'rgba(20,184,166,0.15)',
-                                border: '2px solid #14b8a6', borderRadius: '50%',
+                                background: 'rgba(37,99,235,0.15)',
+                                border: '2px solid #2563eb', borderRadius: '50%',
                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                             }}>
-                                <CheckCircle style={{ width: '32px', height: '32px', color: '#14b8a6' }} />
+                                <CheckCircle style={{ width: '32px', height: '32px', color: '#2563eb' }} />
                             </div>
                             <h2 style={{ color: 'white', fontSize: '22px', fontWeight: '700', margin: '0 0 10px' }}>
                                 Mot de passe mis à jour !
@@ -127,7 +127,7 @@ const ResetPasswordPage = () => {
                             <button
                                 onClick={() => window.location.href = '/'}
                                 style={{
-                                    background: 'linear-gradient(90deg, #0d9488, #14b8a6)',
+                                    background: 'linear-gradient(90deg, #1d4ed8, #2563eb)',
                                     border: 'none', borderRadius: '12px',
                                     padding: '13px 32px', color: 'white',
                                     fontWeight: '700', fontSize: '15px', cursor: 'pointer',
@@ -144,18 +144,18 @@ const ResetPasswordPage = () => {
                             <div style={{ marginBottom: '28px' }}>
                                 <div style={{
                                     width: '48px', height: '48px', marginBottom: '16px',
-                                    background: 'rgba(20,184,166,0.1)',
-                                    border: '1px solid rgba(20,184,166,0.3)', borderRadius: '14px',
+                                    background: 'rgba(37,99,235,0.1)',
+                                    border: '1px solid rgba(37,99,235,0.3)', borderRadius: '14px',
                                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                                 }}>
-                                    <ShieldCheck style={{ width: '22px', height: '22px', color: '#14b8a6' }} />
+                                    <ShieldCheck style={{ width: '22px', height: '22px', color: '#2563eb' }} />
                                 </div>
                                 <h2 style={{ color: 'white', fontSize: '22px', fontWeight: '700', margin: '0 0 8px' }}>
                                     Nouveau mot de passe
                                 </h2>
                                 <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '13px', margin: 0 }}>
                                     Choisissez un mot de passe sécurisé pour{' '}
-                                    <span style={{ color: '#2dd4bf' }}>{emailParam}</span>
+                                    <span style={{ color: '#3b82f6' }}>{emailParam}</span>
                                 </p>
                             </div>
 
@@ -187,7 +187,7 @@ const ResetPasswordPage = () => {
                                 <div>
                                     <label style={labelStyle}>Nouveau mot de passe</label>
                                     <div style={{ position: 'relative' }}>
-                                        <Lock style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', width: '18px', height: '18px', color: focused === 'pwd' ? '#14b8a6' : 'rgba(255,255,255,0.3)', transition: 'color 0.2s' }} />
+                                        <Lock style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', width: '18px', height: '18px', color: focused === 'pwd' ? '#2563eb' : 'rgba(255,255,255,0.3)', transition: 'color 0.2s' }} />
                                         <input
                                             type={showPassword ? 'text' : 'password'} value={password}
                                             onChange={e => setPassword(e.target.value)}
@@ -222,7 +222,7 @@ const ResetPasswordPage = () => {
                                 <div>
                                     <label style={labelStyle}>Confirmer le mot de passe</label>
                                     <div style={{ position: 'relative' }}>
-                                        <Lock style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', width: '18px', height: '18px', color: focused === 'confirm' ? '#14b8a6' : 'rgba(255,255,255,0.3)', transition: 'color 0.2s' }} />
+                                        <Lock style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', width: '18px', height: '18px', color: focused === 'confirm' ? '#2563eb' : 'rgba(255,255,255,0.3)', transition: 'color 0.2s' }} />
                                         <input
                                             type={showConfirm ? 'text' : 'password'} value={passwordConfirm}
                                             onChange={e => setPasswordConfirm(e.target.value)}
@@ -232,7 +232,7 @@ const ResetPasswordPage = () => {
                                                 paddingRight: '44px',
                                                 borderColor: passwordConfirm && password !== passwordConfirm
                                                     ? '#ef4444'
-                                                    : (focused === 'confirm' ? '#14b8a6' : 'rgba(255,255,255,0.1)'),
+                                                    : (focused === 'confirm' ? '#2563eb' : 'rgba(255,255,255,0.1)'),
                                             }}
                                             onFocus={() => setFocused('confirm')}
                                             onBlur={() => setFocused('')}
@@ -247,14 +247,14 @@ const ResetPasswordPage = () => {
                                         </p>
                                     )}
                                     {passwordConfirm && password === passwordConfirm && password.length >= 6 && (
-                                        <p style={{ color: '#14b8a6', fontSize: '11px', marginTop: '6px' }}>
+                                        <p style={{ color: '#2563eb', fontSize: '11px', marginTop: '6px' }}>
                                             ✓ Les mots de passe correspondent
                                         </p>
                                     )}
                                 </div>
 
                                 <button type="submit" disabled={loading || !token} style={{
-                                    background: !token ? 'rgba(255,255,255,0.1)' : 'linear-gradient(90deg, #0d9488, #14b8a6)',
+                                    background: !token ? 'rgba(255,255,255,0.1)' : 'linear-gradient(90deg, #1d4ed8, #2563eb)',
                                     border: 'none', borderRadius: '12px',
                                     padding: '14px', color: 'white',
                                     fontSize: '15px', fontWeight: '700',

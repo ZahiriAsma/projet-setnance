@@ -7,7 +7,7 @@ import logo from '../assets/logo.png';
 const inputStyle = (focused) => ({
     width: '100%', boxSizing: 'border-box',
     background: 'rgba(255,255,255,0.05)',
-    border: `1px solid ${focused ? '#14b8a6' : 'rgba(255,255,255,0.1)'}`,
+    border: `1px solid ${focused ? '#2563eb' : 'rgba(255,255,255,0.1)'}`,
     borderRadius: '12px',
     padding: '13px 14px 13px 44px',
     color: 'white', fontSize: '14px', outline: 'none',
@@ -51,7 +51,7 @@ const ForgotModal = ({ onClose }) => {
             padding: '24px', backdropFilter: 'blur(6px)',
         }}>
             <div style={{
-                background: '#0f2a2a',
+                background: '#1e293b',
                 border: '1px solid rgba(255,255,255,0.1)',
                 borderRadius: '24px', padding: '36px 32px',
                 width: '100%', maxWidth: '420px',
@@ -72,11 +72,11 @@ const ForgotModal = ({ onClose }) => {
                     <div style={{ textAlign: 'center', padding: '16px 0' }}>
                         <div style={{
                             width: '64px', height: '64px', margin: '0 auto 20px',
-                            background: 'rgba(20,184,166,0.15)',
-                            border: '2px solid #14b8a6', borderRadius: '50%',
+                            background: 'rgba(37,99,235,0.15)',
+                            border: '2px solid #2563eb', borderRadius: '50%',
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
                         }}>
-                            <Mail style={{ width: '28px', height: '28px', color: '#14b8a6' }} />
+                            <Mail style={{ width: '28px', height: '28px', color: '#2563eb' }} />
                         </div>
                         <h3 style={{ color: 'white', fontSize: '20px', fontWeight: '700', margin: '0 0 10px' }}>
                             Email envoyé ! ✅
@@ -84,14 +84,14 @@ const ForgotModal = ({ onClose }) => {
                         <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '14px', lineHeight: '1.6', margin: '0 0 8px' }}>
                             Un lien de réinitialisation a été envoyé à
                         </p>
-                        <p style={{ color: '#2dd4bf', fontWeight: '600', fontSize: '14px', margin: '0 0 24px' }}>
+                        <p style={{ color: '#3b82f6', fontWeight: '600', fontSize: '14px', margin: '0 0 24px' }}>
                             {email}
                         </p>
                         <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: '12px', margin: '0 0 28px', lineHeight: '1.6' }}>
                             Vérifiez votre boîte de réception et cliquez sur le lien pour réinitialiser votre mot de passe. Le lien expire dans <strong style={{ color: 'rgba(255,255,255,0.6)' }}>60 minutes</strong>.
                         </p>
                         <button onClick={onClose} style={{
-                            background: 'linear-gradient(90deg, #0d9488, #14b8a6)',
+                            background: 'linear-gradient(90deg, #1d4ed8, #2563eb)',
                             border: 'none', borderRadius: '12px',
                             padding: '12px 32px', color: 'white',
                             fontWeight: '700', fontSize: '14px', cursor: 'pointer',
@@ -105,11 +105,11 @@ const ForgotModal = ({ onClose }) => {
                         <div style={{ marginBottom: '28px' }}>
                             <div style={{
                                 width: '48px', height: '48px', marginBottom: '16px',
-                                background: 'rgba(20,184,166,0.1)',
-                                border: '1px solid rgba(20,184,166,0.3)', borderRadius: '14px',
+                                background: 'rgba(37,99,235,0.1)',
+                                border: '1px solid rgba(37,99,235,0.3)', borderRadius: '14px',
                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                             }}>
-                                <Mail style={{ width: '22px', height: '22px', color: '#14b8a6' }} />
+                                <Mail style={{ width: '22px', height: '22px', color: '#2563eb' }} />
                             </div>
                             <h3 style={{ color: 'white', fontSize: '20px', fontWeight: '700', margin: '0 0 8px' }}>
                                 Mot de passe oublié ?
@@ -137,7 +137,7 @@ const ForgotModal = ({ onClose }) => {
                                     <Mail style={{
                                         position: 'absolute', left: '14px', top: '50%',
                                         transform: 'translateY(-50%)', width: '18px', height: '18px',
-                                        color: focused ? '#14b8a6' : 'rgba(255,255,255,0.3)',
+                                        color: focused ? '#2563eb' : 'rgba(255,255,255,0.3)',
                                         transition: 'color 0.2s',
                                     }} />
                                     <input
@@ -152,7 +152,7 @@ const ForgotModal = ({ onClose }) => {
                             </div>
 
                             <button type="submit" disabled={loading} style={{
-                                background: 'linear-gradient(90deg, #0d9488, #14b8a6)',
+                                background: 'linear-gradient(90deg, #1d4ed8, #2563eb)',
                                 border: 'none', borderRadius: '12px',
                                 padding: '13px', color: 'white',
                                 fontWeight: '700', fontSize: '14px',
@@ -229,7 +229,7 @@ const LoginPage = () => {
 
             <div style={{
                 minHeight: '100vh', width: '100%',
-                background: 'linear-gradient(135deg, #0d2b2b 0%, #0a2020 40%, #081a1a 70%, #061515 100%)',
+                background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 40%, #0f172a 70%, #020617 100%)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontFamily: "'Inter', 'Segoe UI', sans-serif",
                 padding: '24px', boxSizing: 'border-box',
@@ -245,7 +245,7 @@ const LoginPage = () => {
                         <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '48px' }}>
                             <div style={{
                                 width: '52px', height: '52px',
-                                background: 'linear-gradient(135deg, #14b8a6, #0d9488)',
+                                background: 'linear-gradient(135deg, #2563eb, #1d4ed8)',
                                 borderRadius: '14px',
                                 display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
                             }}>
@@ -253,13 +253,13 @@ const LoginPage = () => {
                             </div>
                             <div>
                                 <div style={{ fontSize: '22px', fontWeight: '700', lineHeight: '1.1' }}>InterNat Stock</div>
-                                <div style={{ fontSize: '11px', color: '#2dd4bf', fontWeight: '600', letterSpacing: '0.15em', textTransform: 'uppercase' }}>OFPPT · SYSTÈME DE GESTION</div>
+                                <div style={{ fontSize: '11px', color: '#3b82f6', fontWeight: '600', letterSpacing: '0.15em', textTransform: 'uppercase' }}>OFPPT · SYSTÈME DE GESTION</div>
                             </div>
                         </div>
 
                         <h1 style={{ fontSize: 'clamp(32px, 5vw, 52px)', fontWeight: '800', lineHeight: '1.15', margin: '0 0 20px 0' }}>
                             La gestion de stock<br />
-                            <span style={{ color: '#2dd4bf' }}>réinventée</span> pour les internats
+                            <span style={{ color: '#3b82f6' }}>réinventée</span> pour les internats
                         </h1>
 
                         <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: '15px', lineHeight: '1.7', margin: '0 0 40px 0', maxWidth: '460px' }}>
@@ -271,7 +271,7 @@ const LoginPage = () => {
                                 <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                                     <div style={{
                                         width: '36px', height: '36px', flexShrink: 0,
-                                        background: 'linear-gradient(135deg, #14b8a6, #0d9488)',
+                                        background: 'linear-gradient(135deg, #2563eb, #1d4ed8)',
                                         borderRadius: '10px',
                                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                                     }}>{f.icon}</div>
@@ -314,7 +314,7 @@ const LoginPage = () => {
                             <div>
                                 <label style={labelStyle}>Adresse Email</label>
                                 <div style={{ position: 'relative' }}>
-                                    <Mail style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', width: '18px', height: '18px', color: focused === 'email' ? '#14b8a6' : 'rgba(255,255,255,0.3)', transition: 'color 0.2s' }} />
+                                    <Mail style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', width: '18px', height: '18px', color: focused === 'email' ? '#2563eb' : 'rgba(255,255,255,0.3)', transition: 'color 0.2s' }} />
                                     <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="admin@ofppt.ma" required style={inputStyle(focused === 'email')} onFocus={() => setFocused('email')} onBlur={() => setFocused('')} />
                                 </div>
                             </div>
@@ -323,7 +323,7 @@ const LoginPage = () => {
                             <div>
                                 <label style={labelStyle}>Mot de passe</label>
                                 <div style={{ position: 'relative' }}>
-                                    <Lock style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', width: '18px', height: '18px', color: focused === 'pwd' ? '#14b8a6' : 'rgba(255,255,255,0.3)', transition: 'color 0.2s' }} />
+                                    <Lock style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', width: '18px', height: '18px', color: focused === 'pwd' ? '#2563eb' : 'rgba(255,255,255,0.3)', transition: 'color 0.2s' }} />
                                     <input type={showPassword ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" required style={{ ...inputStyle(focused === 'pwd'), paddingRight: '44px' }} onFocus={() => setFocused('pwd')} onBlur={() => setFocused('')} />
                                     <button type="button" onClick={() => setShowPassword(!showPassword)} style={{ position: 'absolute', right: '14px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.3)', padding: 0, display: 'flex' }}>
                                         {showPassword ? <EyeOff style={{ width: '18px', height: '18px' }} /> : <Eye style={{ width: '18px', height: '18px' }} />}
@@ -337,8 +337,8 @@ const LoginPage = () => {
                                     <div onClick={() => setRememberMe(!rememberMe)} style={{
                                         width: '16px', height: '16px', flexShrink: 0,
                                         borderRadius: '4px',
-                                        border: `2px solid ${rememberMe ? '#14b8a6' : 'rgba(255,255,255,0.25)'}`,
-                                        background: rememberMe ? '#14b8a6' : 'transparent',
+                                        border: `2px solid ${rememberMe ? '#2563eb' : 'rgba(255,255,255,0.25)'}`,
+                                        background: rememberMe ? '#2563eb' : 'transparent',
                                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                                         cursor: 'pointer', transition: 'all 0.2s',
                                     }}>
@@ -353,7 +353,7 @@ const LoginPage = () => {
 
                                 <button type="button" onClick={() => setShowForgot(true)} style={{
                                     background: 'none', border: 'none',
-                                    color: '#2dd4bf', cursor: 'pointer',
+                                    color: '#3b82f6', cursor: 'pointer',
                                     fontWeight: '500', fontSize: '13px', padding: 0,
                                 }}>
                                     Mot de passe oublié ?
@@ -362,7 +362,7 @@ const LoginPage = () => {
 
                             {/* Submit */}
                             <button type="submit" disabled={loading} style={{
-                                background: 'linear-gradient(90deg, #0d9488, #14b8a6)',
+                                background: 'linear-gradient(90deg, #1d4ed8, #2563eb)',
                                 border: 'none', borderRadius: '12px',
                                 padding: '14px', color: 'white',
                                 fontSize: '15px', fontWeight: '700',

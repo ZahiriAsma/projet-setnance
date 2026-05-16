@@ -14,7 +14,7 @@ function App() {
     return (
       <div style={{
         minHeight: '100vh',
-        background: 'linear-gradient(135deg, #0d2b2b 0%, #061515 100%)',
+        background: 'linear-gradient(135deg, #0f172a 0%, #020617 100%)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         fontFamily: "'Inter', 'Segoe UI', sans-serif", color: 'white',
       }}>
@@ -22,12 +22,12 @@ function App() {
           <div style={{
             fontSize: '48px', marginBottom: '16px',
             width: '80px', height: '80px', margin: '0 auto 20px',
-            background: 'linear-gradient(135deg, #14b8a6, #0d9488)',
+            background: 'linear-gradient(135deg, #2563eb, #1d4ed8)',
             borderRadius: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>📦</div>
           <h1 style={{ fontSize: '28px', fontWeight: '700', margin: '0 0 8px' }}>Tableau de Bord</h1>
           <p style={{ color: 'rgba(255,255,255,0.5)', margin: '0 0 28px' }}>
-            Bienvenue, <span style={{ color: '#2dd4bf' }}>{user?.name || 'Utilisateur'}</span>
+            Bienvenue, <span style={{ color: '#3b82f6' }}>{user?.name || 'Utilisateur'}</span>
           </p>
           <button
             onClick={() => {
