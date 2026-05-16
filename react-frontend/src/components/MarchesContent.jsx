@@ -43,6 +43,7 @@ const MarchesContent = () => {
       fetchMarches(); // Refresh
     } catch (error) {
       console.error('Erreur lors de l\'ajout', error);
+      alert("Erreur lors de l'enregistrement. Veuillez vérifier vos informations ou vous reconnecter.");
     } finally {
       setSubmitting(false);
     }
