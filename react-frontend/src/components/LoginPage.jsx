@@ -231,7 +231,7 @@ const LoginPage = () => {
 
             <div style={{
                 minHeight: '100vh', width: '100%',
-                backgroundImage: `linear-gradient(rgba(2, 6, 23, 0.7), rgba(2, 6, 23, 0.7)), url(${cardBg})`,
+                backgroundImage: `linear-gradient(rgba(255, 255, 255, 0.4), rgba(255, 255, 255, 0.4)), url(${cardBg})`,
                 backgroundSize: 'cover',
                 backgroundPosition: 'center',
                 backgroundAttachment: 'fixed',
@@ -246,7 +246,7 @@ const LoginPage = () => {
                     gap: '48px', flexWrap: 'wrap',
                 }}>
                     {/* ── LEFT ── */}
-                    <div style={{ flex: 1, minWidth: '320px', color: 'white' }}>
+                    <div style={{ flex: 1, minWidth: '320px', color: '#1e293b' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '48px' }}>
                             <div style={{
                                 width: '52px', height: '52px',
@@ -267,7 +267,7 @@ const LoginPage = () => {
                             <span style={{ color: '#3b82f6' }}>réinventée</span> pour les internats
                         </h1>
 
-                        <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: '15px', lineHeight: '1.7', margin: '0 0 40px 0', maxWidth: '460px' }}>
+                        <p style={{ color: 'rgba(30, 41, 59, 0.7)', fontSize: '15px', lineHeight: '1.7', margin: '0 0 40px 0', maxWidth: '460px' }}>
                             Pilotez vos marchés, stocks, fournisseurs et menus journaliers depuis une interface moderne, intuitive et centralisée.
                         </p>
 
@@ -280,7 +280,7 @@ const LoginPage = () => {
                                         borderRadius: '10px',
                                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                                     }}>{f.icon}</div>
-                                    <span style={{ color: 'rgba(255,255,255,0.75)', fontSize: '14px', fontWeight: '500' }}>{f.text}</span>
+                                    <span style={{ color: 'rgba(30, 41, 59, 0.8)', fontSize: '14px', fontWeight: '500' }}>{f.text}</span>
                                 </div>
                             ))}
                         </div>
