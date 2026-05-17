@@ -1,26 +1,25 @@
 import React, { useState } from 'react';
-import { Mail, Lock, Eye, EyeOff, Loader2, LayoutDashboard, BarChart3, BellRing, ClipboardCheck, LogIn, X, CheckCircle, ArrowLeft } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, Loader2, LayoutDashboard, BarChart3, BellRing, ClipboardCheck, LogIn, X, ArrowLeft } from 'lucide-react';
 import api from '../api/axios';
 import logo from '../assets/logo.png';
 import cardBg from '../assets/login_bg.png';
 
-/* ─────────────── Shared Styles ─────────────── */
+/* ─────────────── Input style (light, like the image) ─────────────── */
 const inputStyle = (focused) => ({
     width: '100%', boxSizing: 'border-box',
-    background: '#ffffff',
-    border: `1px solid ${focused ? '#22c55e' : '#e2e8f0'}`,
-    borderRadius: '8px',
+    background: 'rgba(0, 0, 0, 0.25)',
+    border: `1px solid ${focused ? '#14b8a6' : 'rgba(255, 255, 255, 0.1)'}`,
+    borderRadius: '12px',
     padding: '13px 14px 13px 44px',
-    color: '#0f172a', fontSize: '14px', outline: 'none',
+    color: '#ffffff', fontSize: '14px', outline: 'none',
     transition: 'all 0.3s ease',
-    boxShadow: focused ? '0 0 0 3px rgba(34, 197, 94, 0.2)' : 'none',
 });
 
 const labelStyle = {
     display: 'block',
-    color: '#ffffff',
+    color: 'rgba(20, 184, 166, 0.8)',
     fontSize: '11px', fontWeight: '700',
-    letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: '8px',
+    letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '8px',
 };
 
 /* ─────────────── Forgot Password Modal ─────────────── */
@@ -49,17 +48,17 @@ const ForgotModal = ({ onClose }) => {
     return (
         <div style={{
             position: 'fixed', inset: 0, zIndex: 1000,
-            background: 'rgba(0,0,0,0.8)',
+            background: 'rgba(0,0,0,0.75)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            padding: '24px', backdropFilter: 'blur(8px)',
+            padding: '24px', backdropFilter: 'blur(10px)',
         }}>
             <div style={{
-                background: 'rgba(15, 23, 42, 0.95)',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
+                backgroundImage: `linear-gradient(rgba(13, 23, 39, 0.98), rgba(13, 23, 39, 0.98))`,
+                border: '1px solid rgba(14, 140, 116, 0.25)',
                 borderRadius: '24px', padding: '36px 32px',
                 width: '100%', maxWidth: '420px',
                 boxSizing: 'border-box', position: 'relative',
-                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.6)',
+                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.6), 0 0 40px rgba(14, 140, 116, 0.05)',
                 color: '#ffffff',
             }}>
                 <button onClick={onClose} style={{
@@ -67,7 +66,7 @@ const ForgotModal = ({ onClose }) => {
                     background: 'rgba(255,255,255,0.05)',
                     border: '1px solid rgba(255,255,255,0.1)',
                     borderRadius: '8px', padding: '6px', cursor: 'pointer',
-                    color: 'rgba(255,255,255,0.6)', display: 'flex', alignItems: 'center',
+                    color: 'rgba(255,255,255,0.4)', display: 'flex', alignItems: 'center',
                     transition: 'all 0.2s',
                 }}>
                     <X style={{ width: '16px', height: '16px' }} />
@@ -77,29 +76,30 @@ const ForgotModal = ({ onClose }) => {
                     <div style={{ textAlign: 'center', padding: '16px 0' }}>
                         <div style={{
                             width: '64px', height: '64px', margin: '0 auto 20px',
-                            background: 'rgba(34, 197, 94, 0.15)',
-                            border: '2px solid #22c55e', borderRadius: '50%',
+                            background: 'rgba(14,140,116,0.15)',
+                            border: '2px solid #0e8c74', borderRadius: '50%',
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
                         }}>
-                            <Mail style={{ width: '28px', height: '28px', color: '#22c55e' }} />
+                            <Mail style={{ width: '28px', height: '28px', color: '#0e8c74' }} />
                         </div>
                         <h3 style={{ color: '#ffffff', fontSize: '20px', fontWeight: '700', margin: '0 0 10px' }}>
                             Email envoyé !
                         </h3>
-                        <p style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: '14px', lineHeight: '1.6', margin: '0 0 8px' }}>
+                        <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '14px', lineHeight: '1.6', margin: '0 0 8px' }}>
                             Un lien de réinitialisation a été envoyé à
                         </p>
-                        <p style={{ color: '#22c55e', fontWeight: '600', fontSize: '14px', margin: '0 0 24px' }}>
+                        <p style={{ color: '#0e8c74', fontWeight: '600', fontSize: '14px', margin: '0 0 24px' }}>
                             {email}
                         </p>
-                        <p style={{ color: 'rgba(255, 255, 255, 0.45)', fontSize: '12px', margin: '0 0 28px', lineHeight: '1.6' }}>
-                            Vérifiez votre boîte de réception et cliquez sur le lien pour réinitialiser votre mot de passe. Le lien expire dans <strong style={{ color: 'rgba(255, 255, 255, 0.7)' }}>60 minutes</strong>.
+                        <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: '12px', margin: '0 0 28px', lineHeight: '1.6' }}>
+                            Vérifiez votre boîte de réception. Le lien expire dans <strong style={{ color: 'rgba(255,255,255,0.7)' }}>60 minutes</strong>.
                         </p>
                         <button onClick={onClose} style={{
-                            background: '#22c55e',
-                            border: 'none', borderRadius: '8px',
+                            background: 'linear-gradient(90deg, #0d1727, #0e8c74)',
+                            border: 'none', borderRadius: '12px',
                             padding: '12px 32px', color: 'white',
-                            fontWeight: '600', fontSize: '14px', cursor: 'pointer',
+                            fontWeight: '700', fontSize: '14px', cursor: 'pointer',
+                            boxShadow: '0 4px 15px rgba(14, 140, 116, 0.3)',
                         }}>
                             Retour à la connexion
                         </button>
@@ -109,16 +109,16 @@ const ForgotModal = ({ onClose }) => {
                         <div style={{ marginBottom: '28px' }}>
                             <div style={{
                                 width: '48px', height: '48px', marginBottom: '16px',
-                                background: 'rgba(34, 197, 94, 0.1)',
-                                border: '1px solid rgba(34, 197, 94, 0.3)', borderRadius: '14px',
+                                background: 'rgba(14,140,116,0.1)',
+                                border: '1px solid rgba(14,140,116,0.3)', borderRadius: '14px',
                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                             }}>
-                                <Mail style={{ width: '22px', height: '22px', color: '#22c55e' }} />
+                                <Mail style={{ width: '22px', height: '22px', color: '#0e8c74' }} />
                             </div>
                             <h3 style={{ color: '#ffffff', fontSize: '20px', fontWeight: '700', margin: '0 0 8px' }}>
                                 Mot de passe oublié ?
                             </h3>
-                            <p style={{ color: 'rgba(255, 255, 255, 0.5)', fontSize: '13px', margin: 0, lineHeight: '1.6' }}>
+                            <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '13px', margin: 0, lineHeight: '1.6' }}>
                                 Entrez votre adresse email. Vous recevrez un lien pour créer un nouveau mot de passe.
                             </p>
                         </div>
@@ -141,7 +141,7 @@ const ForgotModal = ({ onClose }) => {
                                     <Mail style={{
                                         position: 'absolute', left: '14px', top: '50%',
                                         transform: 'translateY(-50%)', width: '18px', height: '18px',
-                                        color: focused ? '#22c55e' : '#94a3b8',
+                                        color: focused ? '#0e8c74' : 'rgba(255,255,255,0.3)',
                                         transition: 'color 0.2s',
                                     }} />
                                     <input
@@ -156,14 +156,15 @@ const ForgotModal = ({ onClose }) => {
                             </div>
 
                             <button type="submit" disabled={loading} style={{
-                                background: '#22c55e',
-                                border: 'none', borderRadius: '8px',
+                                background: 'linear-gradient(90deg, #0d1727, #0e8c74)',
+                                border: 'none', borderRadius: '12px',
                                 padding: '13px', color: 'white',
                                 fontWeight: '600', fontSize: '14px',
                                 cursor: loading ? 'not-allowed' : 'pointer',
                                 display: 'flex', alignItems: 'center',
                                 justifyContent: 'center', gap: '8px',
                                 opacity: loading ? 0.75 : 1,
+                                boxShadow: '0 4px 15px rgba(14, 140, 116, 0.3)',
                             }}>
                                 {loading
                                     ? <Loader2 style={{ width: '18px', height: '18px', animation: 'spin 1s linear infinite' }} />
@@ -173,12 +174,12 @@ const ForgotModal = ({ onClose }) => {
 
                             <button type="button" onClick={onClose} style={{
                                 background: 'none', border: 'none',
-                                color: 'rgba(255,255,255,0.4)', cursor: 'pointer',
+                                color: 'rgba(255,255,255,0.45)', cursor: 'pointer',
                                 fontSize: '13px', display: 'flex',
                                 alignItems: 'center', justifyContent: 'center', gap: '6px',
                                 transition: 'color 0.2s',
                             }}
-                                onMouseEnter={(e) => e.target.style.color = '#ffffff'}
+                                onMouseEnter={(e) => e.target.style.color = '#0e8c74'}
                                 onMouseLeave={(e) => e.target.style.color = 'rgba(255,255,255,0.4)'}>
                                 <ArrowLeft style={{ width: '14px', height: '14px' }} />
                                 Retour à la connexion
@@ -224,169 +225,186 @@ const LoginPage = () => {
     };
 
     const features = [
-        { icon: <LayoutDashboard style={{ width: '16px', height: '16px', color: 'white' }} />, text: "Gestion complète du stock en temps réel" },
-        { icon: <ClipboardCheck style={{ width: '16px', height: '16px', color: 'white' }} />, text: "Workflow intégré des marchés et bons de commande" },
-        { icon: <BarChart3 style={{ width: '16px', height: '16px', color: 'white' }} />, text: "Rapports analytiques et tableaux de bord dynamiques" },
-        { icon: <BellRing style={{ width: '16px', height: '16px', color: 'white' }} />, text: "Alertes automatiques de rupture de stock" },
+        { icon: <LayoutDashboard />, text: "Gestion complète du stock en temps réel" },
+        { icon: <ClipboardCheck />, text: "Workflow intégré des marchés et bons de commande" },
+        { icon: <BarChart3 />, text: "Rapports analytiques et tableaux de bord dynamiques" },
+        { icon: <BellRing />, text: "Alertes automatiques de rupture de stock" },
     ];
 
     return (
         <>
             {showForgot && <ForgotModal onClose={() => setShowForgot(false)} />}
 
+            {/* ── Full-screen warehouse background ── */}
             <div style={{
                 minHeight: '100vh', width: '100%',
-                backgroundImage: `url(${cardBg})`,
+                backgroundImage: `linear-gradient(135deg, rgba(13, 27, 42, 0.98) 0%, rgba(26, 54, 93, 0.95) 100%), url(${cardBg})`,
                 backgroundSize: 'cover',
                 backgroundPosition: 'center',
-                backgroundAttachment: 'fixed',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                backgroundRepeat: 'no-repeat',
+                display: 'flex',
+                alignItems: 'center',
                 fontFamily: "'Inter', 'Segoe UI', sans-serif",
                 padding: '24px', boxSizing: 'border-box',
-                position: 'relative'
             }}>
-                {/* Subtle dark overlay for readability if needed, though the image might have it */}
-                <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)', zIndex: 0 }}></div>
-
                 <div style={{
-                    maxWidth: '1200px', width: '100%',
-                    display: 'flex', alignItems: 'center',
+                    position: 'relative', zIndex: 2,
+                    width: '100%', maxWidth: '1200px',
+                    margin: '0 auto',
+                    display: 'flex',
+                    alignItems: 'center',
                     justifyContent: 'space-between',
-                    gap: '60px', flexWrap: 'wrap',
-                    zIndex: 1, position: 'relative'
+                    gap: '48px', flexWrap: 'wrap',
                 }}>
-                    {/* ── LEFT ── */}
-                    <div style={{ flex: 1, minWidth: '320px', color: '#ffffff' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '48px' }}>
+
+                    {/* ── LEFT: Branding & Features ── */}
+                    <div style={{ flex: 1, minWidth: '300px', color: '#ffffff' }}>
+
+                        {/* Logo row */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '44px' }}>
                             <div style={{
-                                width: '70px', height: '70px',
-                                border: '4px solid #10b981',
-                                borderRadius: '50%',
+                                width: '52px', height: '52px',
+                                background: 'linear-gradient(135deg, #0e8c74, #0f766e)',
+                                borderRadius: '14px',
                                 display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-                                backgroundColor: 'rgba(15, 23, 42, 0.7)',
+                                boxShadow: '0 4px 12px rgba(14, 140, 116, 0.3)',
                             }}>
-                                <img src={logo} alt="Logo" style={{ width: '40px', height: '40px', objectFit: 'contain', filter: 'brightness(0) invert(1)' }} />
+                                <img src={logo} alt="Logo" style={{ width: '28px', height: '28px', objectFit: 'contain', filter: 'brightness(0) invert(1)' }} />
                             </div>
                             <div>
-                                <div style={{ fontSize: '24px', fontWeight: '800', lineHeight: '1.1', color: '#ffffff' }}>InterNat Stock</div>
-                                <div style={{ fontSize: '11px', color: '#10b981', fontWeight: '700', letterSpacing: '0.15em', textTransform: 'uppercase' }}>OFFPT - SYSTÈME DE GESTION</div>
+                                <div style={{ fontSize: '22px', fontWeight: '700', lineHeight: '1.1', color: '#ffffff' }}>InterNat Stock</div>
+                                <div style={{ fontSize: '11px', color: '#0e8c74', fontWeight: '600', letterSpacing: '0.15em', textTransform: 'uppercase' }}>OFPPT · SYSTÈME DE GESTION</div>
                             </div>
                         </div>
 
-                        <h1 style={{ fontSize: 'clamp(36px, 5vw, 56px)', fontWeight: '800', lineHeight: '1.2', margin: '0 0 20px 0', color: '#ffffff' }}>
+                        <h1 style={{ fontSize: 'clamp(32px, 5vw, 52px)', fontWeight: '800', lineHeight: '1.15', margin: '0 0 20px 0', color: '#ffffff' }}>
                             La gestion de stock<br />
-                            <span style={{ color: '#34d399' }}>réinventée</span> pour les internats
+                            <span style={{ color: '#0e8c74' }}>réinventée</span> pour les internats
                         </h1>
 
-                        <p style={{ color: '#ffffff', fontSize: '16px', lineHeight: '1.6', margin: '0 0 40px 0', maxWidth: '520px' }}>
+                        <p style={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '15px', lineHeight: '1.7', margin: '0 0 40px 0', maxWidth: '460px' }}>
                             Pilotez vos marchés, stocks, fournisseurs et menus journaliers depuis une interface moderne, intuitive et centralisée.
                         </p>
 
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                             {features.map((f, i) => (
-                                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
                                     <div style={{
-                                        width: '32px', height: '32px', flexShrink: 0,
-                                        background: '#0f766e',
-                                        borderRadius: '8px',
-                                        border: '1px solid #14b8a6',
+                                        width: '36px', height: '36px', flexShrink: 0,
+                                        background: 'rgba(14, 140, 116, 0.15)',
+                                        border: '1px solid rgba(14, 140, 116, 0.3)',
+                                        borderRadius: '10px',
                                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                                     }}>
-                                        {React.cloneElement(f.icon, { style: { ...f.icon.props.style, color: '#4ade80' } })}
+                                        {React.cloneElement(f.icon, { style: { ...f.icon.props.style, color: '#0e8c74' } })}
                                     </div>
-                                    <span style={{ color: '#ffffff', fontSize: '15px', fontWeight: '500' }}>{f.text}</span>
+                                    <span style={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: '14px', fontWeight: '500' }}>{f.text}</span>
                                 </div>
                             ))}
                         </div>
                     </div>
 
-                    {/* ── RIGHT: LOGIN CARD ── */}
+                    {/* ── RIGHT: Login Card (glassmorphism) ── */}
                     <div style={{
-                        width: '100%', maxWidth: '420px',
-                        background: 'rgba(30, 41, 59, 0.85)',
-                        border: '1px solid rgba(255, 255, 255, 0.1)',
-                        borderRadius: '24px', padding: '48px 40px',
+                        width: '100%', maxWidth: '400px',
+                        background: 'rgba(13, 23, 39, 0.7)',
+                        border: '1px solid rgba(14, 140, 116, 0.2)',
+                        borderRadius: '24px', padding: '40px 36px',
                         boxSizing: 'border-box',
-                        backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
+                        backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
                         flexShrink: 0,
-                        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+                        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.6), 0 0 40px rgba(14, 140, 116, 0.05)',
                     }}>
-                        <div style={{ marginBottom: '36px' }}>
-                            <h2 style={{ color: '#ffffff', fontSize: '28px', fontWeight: '700', margin: '0 0 8px 0' }}>
+                        <div style={{ marginBottom: '32px' }}>
+                            <h2 style={{ color: '#ffffff', fontSize: '26px', fontWeight: '700', margin: '0 0 8px 0' }}>
                                 Bienvenue
                             </h2>
-                            <p style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: '14px', margin: 0 }}>
-                                Connectec vous à votte espare de gestion
+                            <p style={{ color: 'rgba(255, 255, 255, 0.5)', fontSize: '13px', margin: 0 }}>
+                                Connectez-vous à votre espace de gestion
                             </p>
                         </div>
 
-                        <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                        <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                             {error && (
                                 <div style={{
                                     background: 'rgba(239,68,68,0.15)',
                                     border: '1px solid rgba(239,68,68,0.4)',
-                                    borderRadius: '8px', padding: '12px 14px',
+                                    borderRadius: '10px', padding: '10px 14px',
                                     color: '#fca5a5', fontSize: '13px',
-                                }}>{error}</div>
+                                }}>
+                                    {error}
+                                </div>
                             )}
 
-                            {/* Email */}
+                            {/* Email field */}
                             <div>
                                 <label style={labelStyle}>ADRESSE EMAIL</label>
                                 <div style={{ position: 'relative' }}>
                                     <Mail style={{
                                         position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)',
                                         width: '18px', height: '18px',
-                                        color: '#34d399',
+                                        color: focused === 'email' ? '#0e8c74' : 'rgba(255,255,255,0.35)',
+                                        transition: 'color 0.2s'
                                     }} />
                                     <input
                                         type="email" value={email} onChange={e => setEmail(e.target.value)}
-                                        placeholder="adirrin@ofppt ma" required
+                                        placeholder="admin@ofppt.ma" required
                                         style={inputStyle(focused === 'email')}
-                                        onFocus={() => setFocused('email')} onBlur={() => setFocused('')}
+                                        onFocus={() => setFocused('email')}
+                                        onBlur={() => setFocused('')}
                                     />
                                 </div>
                             </div>
 
-                            {/* Password */}
+                            {/* Password field */}
                             <div>
                                 <label style={labelStyle}>MOT DE PASSE</label>
                                 <div style={{ position: 'relative' }}>
                                     <Lock style={{
                                         position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)',
                                         width: '18px', height: '18px',
-                                        color: '#94a3b8',
+                                        color: focused === 'pwd' ? '#0e8c74' : 'rgba(255,255,255,0.35)',
+                                        transition: 'color 0.2s'
                                     }} />
                                     <input
-                                        type={showPassword ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)}
-                                        placeholder="••••••••" required
+                                        type={showPassword ? 'text' : 'password'}
+                                        value={password}
+                                        onChange={e => setPassword(e.target.value)}
+                                        placeholder="••••••••"
+                                        required
                                         style={{ ...inputStyle(focused === 'pwd'), paddingRight: '44px' }}
-                                        onFocus={() => setFocused('pwd')} onBlur={() => setFocused('')}
+                                        onFocus={() => setFocused('pwd')}
+                                        onBlur={() => setFocused('')}
                                     />
                                     <button
-                                        type="button" onClick={() => setShowPassword(!showPassword)}
+                                        type="button"
+                                        onClick={() => setShowPassword(!showPassword)}
                                         style={{
-                                            position: 'absolute', right: '14px', top: '50%', transform: 'translateY(-50%)',
+                                            position: 'absolute', right: '13px', top: '50%',
+                                            transform: 'translateY(-50%)',
                                             background: 'none', border: 'none', cursor: 'pointer',
-                                            color: '#94a3b8', padding: 0, display: 'flex',
+                                            color: 'rgba(255,255,255,0.35)', padding: 0, display: 'flex',
                                             transition: 'color 0.2s',
                                         }}
-                                        onMouseEnter={(e) => e.target.style.color = '#334155'}
-                                        onMouseLeave={(e) => e.target.style.color = '#94a3b8'}
+                                        onMouseEnter={(e) => e.target.style.color = '#0e8c74'}
+                                        onMouseLeave={(e) => e.target.style.color = 'rgba(255,255,255,0.35)'}
                                     >
-                                        {showPassword ? <EyeOff style={{ width: '18px', height: '18px' }} /> : <Eye style={{ width: '18px', height: '18px' }} />}
+                                        {showPassword
+                                            ? <EyeOff style={{ width: '17px', height: '17px' }} />
+                                            : <Eye style={{ width: '17px', height: '17px' }} />
+                                        }
                                     </button>
                                 </div>
                             </div>
 
                             {/* Remember Me + Forgot */}
-                            <div style={{ display: 'flex', alignItems: 'center', fontSize: '13px', marginTop: '-4px' }}>
-                                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', color: '#ffffff', userSelect: 'none' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifycontent: 'space-between', fontSize: '13px' }}>
+                                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', color: 'rgba(255, 255, 255, 0.7)', userSelect: 'none' }}>
                                     <div onClick={() => setRememberMe(!rememberMe)} style={{
-                                        width: '18px', height: '18px', flexShrink: 0,
+                                        width: '16px', height: '16px', flexShrink: 0,
                                         borderRadius: '4px',
-                                        background: rememberMe ? '#22c55e' : 'transparent',
-                                        border: rememberMe ? 'none' : '2px solid rgba(255,255,255,0.4)',
+                                        border: `2px solid ${rememberMe ? '#0e8c74' : 'rgba(255,255,255,0.2)'}`,
+                                        background: rememberMe ? '#0e8c74' : 'transparent',
                                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                                         cursor: 'pointer', transition: 'all 0.2s',
                                     }}>
@@ -400,52 +418,53 @@ const LoginPage = () => {
                                 </label>
 
                                 <button
-                                    type="button" onClick={() => setShowForgot(true)}
+                                    type="button"
+                                    onClick={() => setShowForgot(true)}
                                     style={{
                                         background: 'none', border: 'none',
-                                        color: '#38bdf8', cursor: 'pointer',
-                                        fontSize: '13px', padding: 0, marginLeft: '0px',
+                                        color: '#0e8c74', cursor: 'pointer',
+                                        fontWeight: '500', fontSize: '13px', padding: 0,
                                         transition: 'color 0.2s',
                                     }}
-                                    onMouseEnter={(e) => e.target.style.color = '#7dd3fc'}
-                                    onMouseLeave={(e) => e.target.style.color = '#38bdf8'}
+                                    onMouseEnter={(e) => e.target.style.color = '#0f766e'}
+                                    onMouseLeave={(e) => e.target.style.color = '#0e8c74'}
                                 >
                                     Mot de passe oublie ?
                                 </button>
                             </div>
 
                             {/* Submit */}
-                            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '16px' }}>
-                                <button type="submit" disabled={loading} style={{
-                                    background: '#22c55e',
-                                    border: 'none', borderRadius: '8px',
-                                    padding: '12px 24px', color: 'white',
-                                    fontSize: '15px', fontWeight: '600',
-                                    cursor: loading ? 'not-allowed' : 'pointer',
-                                    display: 'flex', alignItems: 'center',
-                                    justifyContent: 'center', gap: '8px',
-                                    opacity: loading ? 0.8 : 1, transition: 'all 0.2s ease',
+                            <button type="submit" disabled={loading} style={{
+                                background: 'linear-gradient(90deg, #0d1727, #0e8c74)',
+                                border: 'none', borderRadius: '12px',
+                                padding: '14px', color: 'white',
+                                fontSize: '15px', fontWeight: '700',
+                                cursor: loading ? 'not-allowed' : 'pointer',
+                                display: 'flex', alignItems: 'center',
+                                justifyContent: 'center', gap: '10px',
+                                opacity: loading ? 0.8 : 1, transition: 'all 0.3s ease',
+                                boxShadow: '0 4px 20px rgba(14, 140, 116, 0.4)',
+                            }}
+                                onMouseEnter={(e) => {
+                                    if (!loading) e.target.style.boxShadow = '0 6px 24px rgba(14, 140, 116, 0.55)';
                                 }}
-                                    onMouseEnter={(e) => {
-                                        if (!loading) e.target.style.background = '#16a34a';
-                                    }}
-                                    onMouseLeave={(e) => {
-                                        e.target.style.background = '#22c55e';
-                                    }}>
-                                    {loading
-                                        ? <Loader2 style={{ width: '18px', height: '18px', animation: 'spin 1s linear infinite' }} />
-                                        : <><LogIn style={{ width: '18px', height: '18px' }} /> Se connecter</>
-                                    }
-                                </button>
-                            </div>
+                                onMouseLeave={(e) => {
+                                    e.target.style.boxShadow = '0 4px 20px rgba(14, 140, 116, 0.4)';
+                                }}>
+                                {loading
+                                    ? <Loader2 style={{ width: '20px', height: '20px', animation: 'spin 1s linear infinite' }} />
+                                    : <><LogIn style={{ width: '18px', height: '18px' }} /> Se connecter</>
+                                }
+                            </button>
                         </form>
                     </div>
                 </div>
             </div>
 
             <style>{`
+                @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
                 @keyframes spin { to { transform: rotate(360deg); } }
-                input::placeholder { color: #94a3b8; }
+                input::placeholder { color: rgba(255,255,255,0.25); }
             `}</style>
         </>
     );

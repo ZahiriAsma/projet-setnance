@@ -22,8 +22,5 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Menus routes
     Route::apiResource('menus', \App\Http\Controllers\Api\DailyMenuController::class);
-
-    // Bon Commandes routes
-    Route::apiResource('bon-commandes', \App\Http\Controllers\Api\BonCommandeController::class);
 });
 

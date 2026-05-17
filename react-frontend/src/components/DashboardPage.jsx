@@ -1,13 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import {
   LayoutDashboard, FileText, Package, Users, BarChart3, CalendarDays, Settings, LogOut,
-  Search, Bell, FileSpreadsheet, AlertTriangle, ArrowRight, ChevronRight, Clock, AlertCircle, TrendingUp
+  FileSpreadsheet, AlertTriangle, ArrowRight, ChevronRight, Clock, AlertCircle, TrendingUp
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import MarchesContent from './MarchesContent';
 import FournisseursContent from './FournisseursContent';
 import MenusContent from './MenusContent';
-import ParametresContent from './ParametresContent';
 
 const DashboardPage = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -48,17 +47,17 @@ const DashboardPage = () => {
   // Recharts Data
   const barData = [
     { name: 'Jan', val1: 4000, val2: 2400 },
-    { name: 'Fév', val1: 3000, val2: 1398 },
+    { name: 'Fev', val1: 3000, val2: 1398 },
     { name: 'Mar', val1: 2000, val2: 4800 },
     { name: 'Avr', val1: 2780, val2: 3908 },
     { name: 'Mai', val1: 1890, val2: 4800 },
     { name: 'Juin', val1: 2390, val2: 3800 },
     { name: 'Juil', val1: 3490, val2: 4300 },
-    { name: 'Août', val1: 4490, val2: 3300 },
+    { name: 'Aout', val1: 4490, val2: 3300 },
     { name: 'Sep', val1: 2890, val2: 4500 },
     { name: 'Oct', val1: 3390, val2: 2500 },
     { name: 'Nov', val1: 3890, val2: 2100 },
-    { name: 'Déc', val1: 4290, val2: 3600 },
+    { name: 'Dec', val1: 4290, val2: 3600 },
   ];
 
   const pieData = [
@@ -111,6 +110,7 @@ const DashboardPage = () => {
   );
 
   return (
+    <DashboardProvider onNavigate={(tab) => setActiveTab(tab)}>
     <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: '#f8fafc', fontFamily: "'Inter', sans-serif" }}>
       <style>{`
         .stat-card {
@@ -151,7 +151,6 @@ const DashboardPage = () => {
         }
       `}</style>
 
-      {/* ── SIDEBAR ── */}
       <aside style={{
         width: '260px', backgroundColor: '#0f172a', color: 'white',
         display: 'flex', flexDirection: 'column', flexShrink: 0
@@ -174,7 +173,7 @@ const DashboardPage = () => {
         <div style={{ flex: 1, overflowY: 'auto', paddingRight: '12px' }}>
           <NavGroup title="NAVIGATION PRINCIPALE" />
           <NavItem id="dashboard" icon={LayoutDashboard} label="Tableau de bord" />
-          <NavItem id="marches" icon={FileText} label="Marchés" badge="2" />
+          <NavItem id="marches" icon={FileText} label="Marches" badge="2" />
           <NavItem id="stock" icon={Package} label="Stock" />
           <NavItem id="fournisseurs" icon={Users} label="Fournisseurs" />
 
@@ -183,7 +182,7 @@ const DashboardPage = () => {
           <NavItem id="menus" icon={CalendarDays} label="Menus journaliers" />
 
           <NavGroup title="SYSTÈME" />
-          <NavItem id="parametres" icon={Settings} label="Paramètres" />
+          <NavItem id="parametres" icon={Settings} label="Parametres" />
         </div>
 
         {/* User Profile & Logout */}
@@ -222,13 +221,13 @@ const DashboardPage = () => {
                 color: '#ef4444', fontSize: '12px', fontWeight: '600', cursor: 'pointer',
               }}
             >
-              <LogOut size={14} /> Déconnexion
+              <LogOut size={14} /> Deconnexion
             </button>
           </div>
         </div>
       </aside>
 
-      {/* ── MAIN CONTENT ── */}
+      {/* â”€â”€ MAIN CONTENT â”€â”€ */}
       <main style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
         {/* Header */}
@@ -244,7 +243,6 @@ const DashboardPage = () => {
               {activeTab === 'marches' && 'Marchés'}
               {activeTab === 'fournisseurs' && 'Fournisseurs'}
               {activeTab === 'menus' && 'Menus journaliers'}
-              {activeTab === 'parametres' && 'Paramètres'}
             </span>
           </div>
 
@@ -266,11 +264,11 @@ const DashboardPage = () => {
                 <Bell size={20} />
                 <span style={{ position: 'absolute', top: '-2px', right: '-2px', width: '8px', height: '8px', backgroundColor: '#ef4444', borderRadius: '50%' }}></span>
               </button>
-              <button onClick={() => setActiveTab('parametres')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}><Settings size={20} /></button>
+              <button style={{ background: 'none', border: 'none', cursor: 'pointer' }}><Settings size={20} /></button>
             </div>
             {/* User Avatar Small */}
             <div style={{ width: '32px', height: '32px', backgroundColor: '#0f766e', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '12px', fontWeight: 'bold' }}>
-              {getInitials(currentUser.name)}
+              KA
             </div>
           </div>
         </header>
@@ -288,7 +286,7 @@ const DashboardPage = () => {
                 boxShadow: '0 10px 15px -3px rgba(16, 185, 129, 0.2)', marginBottom: '24px'
               }}>
                 <div>
-                  <h1 style={{ fontSize: '24px', fontWeight: '700', margin: '0 0 8px 0' }}>Bonjour, {currentUser.name?.split(' ')[0] || 'Utilisateur'}</h1>
+                  <h1 style={{ fontSize: '24px', fontWeight: '700', margin: '0 0 8px 0' }}>Bonjour, Karim</h1>
                   <p style={{ margin: 0, fontSize: '14px', opacity: 0.9 }}>Mardi 16 Janvier 2024 - Internat OFPPT Casablanca - Tout est sous contrôle.</p>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
@@ -360,7 +358,7 @@ const DashboardPage = () => {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                     <h3 style={{ margin: 0, fontSize: '15px', fontWeight: '700', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <PieChart size={18} color="#0f766e" />
-                      Répartition budget
+                      Repartition budget
                     </h3>
                   </div>
                   <div style={{ height: '180px', width: '100%', position: 'relative' }}>
@@ -446,8 +444,8 @@ const DashboardPage = () => {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                     {[
                       { title: 'Stock bas critique', desc: 'Viandes moutons - reste 2 jours', icon: <AlertTriangle size={16} color="#ef4444" />, bg: 'rgba(239,68,68,0.1)', border: '#ef4444' },
-                      { title: 'Livraison M-2024-002', desc: 'Retard de 2 jours signalé', icon: <Clock size={16} color="#f59e0b" />, bg: 'rgba(245,158,11,0.1)', border: '#f59e0b' },
-                      { title: 'Facture à valider', desc: 'DISMA Maroc - 124,000 MAD', icon: <FileText size={16} color="#3b82f6" />, bg: 'rgba(59,130,246,0.1)', border: '#3b82f6' },
+                      { title: 'Livraison M-2024-002', desc: 'Retard de 2 jours signalÃ©', icon: <Clock size={16} color="#f59e0b" />, bg: 'rgba(245,158,11,0.1)', border: '#f59e0b' },
+                      { title: 'Facture Ã  valider', desc: 'DISMA Maroc - 124,000 MAD', icon: <FileText size={16} color="#3b82f6" />, bg: 'rgba(59,130,246,0.1)', border: '#3b82f6' },
                     ].map((alert, i) => (
                       <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', padding: '12px', backgroundColor: '#f8fafc', borderRadius: '12px', borderLeft: `3px solid ${alert.border}` }}>
                         <div style={{ width: '32px', height: '32px', borderRadius: '8px', backgroundColor: alert.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -472,6 +470,7 @@ const DashboardPage = () => {
         </div>
       </main>
     </div>
+    </DashboardProvider>
   );
 };
 

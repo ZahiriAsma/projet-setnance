@@ -2,19 +2,17 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
 use App\Models\DailyMenu;
+use Carbon\Carbon;
+use Illuminate\Database\Seeder;
 
 class DailyMenuSeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     */
     public function run(): void
     {
         DailyMenu::truncate();
 
-        $menus = [
+        $weeklyTemplates = [
             [
                 'jour' => 'Lundi',
                 'petit_dejeuner' => "Café au lait\n1 Beurre ou 1 fromage\n1 Confiture\n1 Pain",
@@ -87,8 +85,19 @@ class DailyMenuSeeder extends Seeder
             ],
         ];
 
-        foreach ($menus as $menu) {
-            DailyMenu::create($menu);
+        // Année scolaire 2025-2026 : un enregistrement par date calendaire
+        $cursor = Carbon::parse('2025-09-01');
+        $end = Carbon::parse('2026-06-30');
+
+        while ($cursor->lte($end)) {
+            $template = $weeklyTemplates[$cursor->dayOfWeekIso - 1];
+
+            DailyMenu::create([
+                ...$template,
+                'date' => $cursor->toDateString(),
+            ]);
+
+            $cursor->addDay();
         }
     }
 }

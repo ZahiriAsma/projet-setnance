@@ -1,41 +1,130 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  Coffee, Utensils, Moon, Scale, AlertTriangle, CheckCircle2, 
-  Printer, Plus, Edit2, X, Save, Loader2, ArrowRight 
+  Coffee, Utensils, Moon, FileText, AlertTriangle, CheckCircle2, 
+  Printer, Plus, X, Save, Loader2, ChevronLeft, ChevronRight
 } from 'lucide-react';
 import api from '../api/axios';
+import { useDashboard } from '../context/DashboardContext';
+import { analyzeMenuBudget, MENU_PRICE_LIMIT_DH } from '../utils/menuPrices';
 
-// Helper to dynamically get current week days (Monday - Sunday)
-const getWeekDays = () => {
-  const today = new Date();
-  const currentDay = today.getDay(); // 0 (Sunday) to 6 (Saturday)
-  const distanceToMonday = currentDay === 0 ? -6 : 1 - currentDay;
-  const monday = new Date(today);
-  monday.setDate(today.getDate() + distanceToMonday);
+const formatDateISO = (date) => {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+};
 
+const getMondayOfWeek = (refDate = new Date()) => {
+  const monday = new Date(refDate);
+  const day = monday.getDay();
+  const offset = day === 0 ? -6 : 1 - day;
+  monday.setDate(monday.getDate() + offset);
+  monday.setHours(0, 0, 0, 0);
+  return monday;
+};
+
+const getWeekDays = (weekMonday) => {
   const dayNames = ['LUN', 'MAR', 'MER', 'JEU', 'VEN', 'SAM', 'DIM'];
   const fullDayNames = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
 
   return Array.from({ length: 7 }, (_, idx) => {
-    const dayDate = new Date(monday);
-    dayDate.setDate(monday.getDate() + idx);
+    const dayDate = new Date(weekMonday);
+    dayDate.setDate(weekMonday.getDate() + idx);
     return {
       name: dayNames[idx],
       date: dayDate.getDate().toString(),
       full: fullDayNames[idx],
-      dateObj: dayDate
+      dateObj: dayDate,
+      iso: formatDateISO(dayDate),
     };
   });
 };
 
+/** Parse une ligne du menu (format base de données) en { name, qty } */
+const parseMealLine = (line) => {
+  const trimmed = line.trim();
+  if (!trimmed) return null;
+
+  const colonMatch = trimmed.match(/^(.+?):\s*(.+)$/);
+  if (colonMatch) {
+    return { name: colonMatch[1].trim(), qty: colonMatch[2].trim() };
+  }
+
+  const leadingQty = trimmed.match(/^(\d+\/\d+|\d+(?:[.,]\d+)?)\s+(.+)$/);
+  if (leadingQty) {
+    return { name: leadingQty[2].trim(), qty: leadingQty[1].replace(',', '.') };
+  }
+
+  const unitQty = trimmed.match(/^(\d+(?:[.,]\d+)?\s*(?:ml|cl|L|kg|g))\s+(.+)$/i);
+  if (unitQty) {
+    return { name: unitQty[2].trim(), qty: unitQty[1].replace(',', '.') };
+  }
+
+  return { name: trimmed, qty: 'par pers.' };
+};
+
+const mealTextToItems = (mealText) => {
+  if (!mealText) return [];
+  return mealText
+    .split('\n')
+    .map(parseMealLine)
+    .filter(Boolean);
+};
+
+/** Stocks indicatifs pour le tableau « Besoin total » (en attendant module inventaire) */
+const STOCK_INDICATIF = [
+  { keys: ['pain'], stock: 2200, unit: 'pcs' },
+  { keys: ['beurre'], stock: 15, unit: 'kg' },
+  { keys: ['fromage', 'kiri'], stock: 900, unit: 'portions' },
+  { keys: ['confiture'], stock: 20, unit: 'kg' },
+  { keys: ['lait', 'café au lait', 'petit lait'], stock: 96, unit: 'L' },
+  { keys: ['thé', 'tkhalte'], stock: 8, unit: 'kg' },
+  { keys: ['salade'], stock: 50, unit: 'kg' },
+  { keys: ['viande', 'bœuf', 'boeuf', 'boulette', 'viande hachée'], stock: 75, unit: 'kg' },
+  { keys: ['poulet', 'dinde', 'osso'], stock: 120, unit: 'kg' },
+  { keys: ['poisson', 'maquereau', 'thon'], stock: 65, unit: 'kg' },
+  { keys: ['riz'], stock: 100, unit: 'kg' },
+  { keys: ['lentille', 'haricot', 'semoule', 'couscous'], stock: 80, unit: 'kg' },
+  { keys: ['harira', 'soupe'], stock: 150, unit: 'L' },
+  { keys: ['fruit', 'orange', 'citron'], stock: 500, unit: 'pcs' },
+  { keys: ['œuf', 'oeuf'], stock: 800, unit: 'pcs' },
+  { keys: ['yaourt'], stock: 400, unit: 'pots' },
+  { keys: ['pâte', 'pate', 'spaghetti'], stock: 60, unit: 'kg' },
+  { keys: ['pois chiche', 'olive'], stock: 40, unit: 'kg' },
+  { keys: ['jus'], stock: 200, unit: 'L' },
+];
+
+const findStockForItem = (nameLower) => {
+  const entry = STOCK_INDICATIF.find(({ keys }) =>
+    keys.some((k) => nameLower.includes(k))
+  );
+  return entry || { stock: 500, unit: 'portions' };
+};
+
+const parseQtyValue = (qtyStr) => {
+  const s = qtyStr.toLowerCase().trim();
+  if (s.includes('/')) {
+    const [a, b] = s.split('/').map(Number);
+    return b ? a / b : 1;
+  }
+  const num = parseFloat(s.replace(/[^\d.,]/g, '').replace(',', '.'));
+  return Number.isFinite(num) && num > 0 ? num : 1;
+};
+
 const MenusContent = () => {
-  const daysInfo = getWeekDays();
+  const { checkMenuPrices, setShowNotifications } = useDashboard();
   const today = new Date();
-  const todayIndex = today.getDay() === 0 ? 6 : today.getDay() - 1;
+  const todayIso = formatDateISO(today);
+
+  const [weekStart, setWeekStart] = useState(() => getMondayOfWeek(today));
+  const daysInfo = getWeekDays(weekStart);
+
+  const todayIndexInWeek = daysInfo.findIndex((d) => d.iso === todayIso);
+  const defaultDayIndex = todayIndexInWeek >= 0 ? todayIndexInWeek : 0;
 
   const [menus, setMenus] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [selectedDayIndex, setSelectedDayIndex] = useState(todayIndex); // Default to today
+  const [selectedDayIndex, setSelectedDayIndex] = useState(defaultDayIndex);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editFormData, setEditFormData] = useState({
     petit_dejeuner: '',
@@ -49,24 +138,43 @@ const MenusContent = () => {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    fetchMenus();
-  }, []);
+    fetchMenus(weekStart);
+  }, [weekStart]);
 
-  const fetchMenus = async () => {
+  useEffect(() => {
+    const idx = daysInfo.findIndex((d) => d.iso === todayIso);
+    if (formatDateISO(weekStart) === formatDateISO(getMondayOfWeek(today)) && idx >= 0) {
+      setSelectedDayIndex(idx);
+    } else {
+      setSelectedDayIndex(0);
+    }
+  }, [weekStart]);
+
+  const fetchMenus = async (monday) => {
     try {
       setLoading(true);
-      const res = await api.get('/menus');
+      const res = await api.get('/menus', {
+        params: { week_start: formatDateISO(monday) },
+      });
       setMenus(res.data);
     } catch (err) {
-      console.error("Erreur lors de la récupération des menus:", err);
+      console.error('Erreur lors de la récupération des menus:', err);
     } finally {
       setLoading(false);
     }
   };
 
-  const selectedMenu = menus.find(
-    m => m.jour.toLowerCase() === daysInfo[selectedDayIndex].full.toLowerCase()
-  ) || null;
+  const selectedDay = daysInfo[selectedDayIndex];
+  const selectedMenu = menus.find((m) => {
+    const menuDate = typeof m.date === 'string' ? m.date.slice(0, 10) : formatDateISO(new Date(m.date));
+    return menuDate === selectedDay?.iso;
+  }) || null;
+
+  const changeWeek = (delta) => {
+    const next = new Date(weekStart);
+    next.setDate(weekStart.getDate() + delta * 7);
+    setWeekStart(next);
+  };
 
   const handleOpenEditModal = () => {
     if (selectedMenu) {
@@ -83,195 +191,81 @@ const MenusContent = () => {
     }
   };
 
+  const menuBudget = analyzeMenuBudget(editFormData);
+
   const handleEditSubmit = async (e) => {
     e.preventDefault();
     if (!selectedMenu) return;
     try {
       setSaving(true);
       const res = await api.put(`/menus/${selectedMenu.id}`, editFormData);
-      
-      // Update local state
-      setMenus(prev => prev.map(m => m.id === selectedMenu.id ? res.data.menu : m));
+
+      setMenus((prev) => prev.map((m) => (m.id === selectedMenu.id ? res.data.menu : m)));
+
+      if (checkMenuPrices(editFormData, getSelectedDayFullText())) {
+        setShowNotifications(true);
+      }
+
       setIsEditModalOpen(false);
     } catch (err) {
-      console.error("Erreur lors de la mise à jour du menu:", err);
-      alert("Erreur de mise à jour");
+      console.error('Erreur lors de la mise à jour du menu:', err);
+      alert('Erreur de mise à jour');
     } finally {
       setSaving(false);
     }
   };
 
-  // Helper to parse line items with custom quantities
-  const getMealItems = (mealText, mealType) => {
-    if (!mealText) return [];
-    return mealText.split('\n').filter(line => line.trim() !== '').map(line => {
-      const trimmed = line.trim();
-      
-      // Pre-baked list of quantities to match Image 1 details exactly
-      if (trimmed.toLowerCase().includes('pain baguette')) return { name: 'Pain baguette', qty: '4 pcs/pers' };
-      if (trimmed.toLowerCase().includes('beurre')) return { name: 'Beurre', qty: '28g' };
-      if (trimmed.toLowerCase().includes('confiture')) return { name: 'Confiture', qty: '38g' };
-      if (trimmed.toLowerCase().includes('lait uht')) return { name: 'Lait UHT', qty: '250ml' };
-      if (trimmed.toLowerCase().includes('fromage kiri') || trimmed.toLowerCase().includes('fromage')) return { name: 'Fromage kiri', qty: '2 portions' };
-      
-      if (trimmed.toLowerCase().includes('harira')) return { name: 'Harira (soupe)', qty: '250ml' };
-      if (trimmed.toLowerCase().includes('poulet')) return { name: 'Poulet rôti', qty: '200g' };
-      if (trimmed.toLowerCase().includes('riz blanc') || trimmed.toLowerCase().includes('riz')) return { name: 'Riz blanc', qty: '150g' };
-      if (trimmed.toLowerCase().includes('salade')) return { name: 'Salade cuite', qty: '100g' };
-      if (trimmed.toLowerCase().includes('orange') || trimmed.toLowerCase().includes('fruit')) return { name: 'Orange', qty: '1 pièce' };
-      
-      if (trimmed.toLowerCase().includes('soupe')) return { name: 'Soupe légumes', qty: '300ml' };
-      if (trimmed.toLowerCase().includes('œuf')) return { name: 'Œuf dur', qty: '2 pièces' };
-      if (trimmed.toLowerCase().includes('pain complet')) return { name: 'Pain complet', qty: '3 tranches' };
-      if (trimmed.toLowerCase().includes('thon')) return { name: 'Thon conserve', qty: '80g' };
-      if (trimmed.toLowerCase().includes('yaourt')) return { name: 'Yaourt', qty: '1 pot' };
+  const getMealItems = (mealText) => mealTextToItems(mealText);
 
-      // Fallback parser if not matched
-      const match = trimmed.match(/^([\d.,]+)\s*(.*)$/);
-      if (match) {
-        return { name: match[2], qty: match[1] };
-      }
-      return { name: trimmed, qty: '1 portion' };
-    });
-  };
-
-  // Helper to generate dynamic ingredient needs based on day's menu
   const getIngredientNeeds = () => {
     if (!selectedMenu) return [];
     const residents = selectedMenu.residents || 450;
-    
-    // Combine all meal items for the day
+
     const allItems = [
-      ...getMealItems(selectedMenu.petit_dejeuner, 'pd'),
-      ...getMealItems(selectedMenu.dejeuner, 'dej'),
-      ...getMealItems(selectedMenu.diner, 'din')
+      ...mealTextToItems(selectedMenu.petit_dejeuner),
+      ...mealTextToItems(selectedMenu.dejeuner),
+      ...mealTextToItems(selectedMenu.diner),
     ];
 
-    // Static inventory of mock stocks
-    const mockStocks = {
-      'pain baguette': 2200,
-      'beurre': 15.0, // kg
-      'confiture': 20.0, // kg
-      'lait uht': 130.0, // L
-      'fromage kiri': 1000, // portions
-      'harira (soupe)': 150.0, // L
-      'poulet rôti': 110.0, // kg
-      'riz blanc': 100.0, // kg
-      'salade cuite': 50.0, // kg
-      'orange': 500, // pieces
-      'soupe légumes': 120.0, // L
-      'œuf dur': 800, // pieces
-      'pain complet': 1200, // tranches
-      'thon conserve': 45.0, // kg
-      'yaourt': 400, // pots
-      'portions': 1000,
-      'dinde': 90.0,
-      'maquereaux': 65.0,
-      'semoule': 80.0,
-      'viante': 75.0,
-      'lentilles': 60.0
-    };
-
-    return allItems.map(item => {
-      const nameLower = item.name.toLowerCase();
-      
-      // Parse single portion quantity
-      let val = 1;
-      let unit = 'portions';
-      let type = 'portions';
-
-      const qtyLower = item.qty.toLowerCase();
-      const numMatch = qtyLower.match(/^([\d.,]+)/);
-      if (numMatch) {
-        val = parseFloat(numMatch[1].replace(',', '.'));
-      }
-
-      if (qtyLower.includes('pcs/pers') || qtyLower.includes('pièce') || qtyLower.includes('piece') || qtyLower.includes('pcs') || qtyLower.includes('pc')) {
-        unit = 'pièces';
-        type = 'count';
-      } else if (qtyLower.includes('ml')) {
-        unit = 'ml';
-        type = 'ml';
-      } else if (qtyLower.includes('g') && !qtyLower.includes('kg')) {
-        unit = 'g';
-        type = 'g';
-      } else if (qtyLower.includes('kg')) {
-        unit = 'kg';
-        type = 'kg';
-      } else if (qtyLower.includes('l') && !qtyLower.includes('ml')) {
-        unit = 'L';
-        type = 'L';
-      } else if (qtyLower.includes('portions') || qtyLower.includes('portion')) {
-        unit = 'portions';
-        type = 'portions';
-      } else if (qtyLower.includes('tranches') || qtyLower.includes('tranche')) {
-        unit = 'tranches';
-        type = 'tranches';
-      } else if (qtyLower.includes('pot')) {
-        unit = 'pots';
-        type = 'pots';
-      }
-
-      // Calculate raw requirement for all residents
-      let totalNeededRaw = val * residents;
-      let displayRaw = '';
-      let displayStock = '';
-      let displayOrder = '-';
-      let status = 'OK';
-      let neededValueForCompare = totalNeededRaw;
-      let stockValueForCompare = 0;
-
-      // Find stock key
-      let stockKey = Object.keys(mockStocks).find(k => nameLower.includes(k)) || 'portions';
-      stockValueForCompare = mockStocks[stockKey];
-
-      if (type === 'g') {
-        // Convert g to kg for display
-        const totalKg = totalNeededRaw / 1000;
-        displayRaw = `${totalKg.toFixed(1)} kg`;
-        displayStock = `${stockValueForCompare} kg`;
-        neededValueForCompare = totalKg;
-        
-        if (stockValueForCompare < totalKg) {
-          status = 'Manque';
-          displayOrder = `${(totalKg - stockValueForCompare).toFixed(1)} kg`;
-        }
-      } else if (type === 'ml') {
-        // Convert ml to L for display
-        const totalL = totalNeededRaw / 1000;
-        displayRaw = `${totalL.toFixed(1)} L`;
-        displayStock = `${stockValueForCompare} L`;
-        neededValueForCompare = totalL;
-
-        if (stockValueForCompare < totalL) {
-          status = 'Manque';
-          displayOrder = `${(totalL - stockValueForCompare).toFixed(1)} L`;
-        }
-      } else if (type === 'count') {
-        displayRaw = `${Math.round(totalNeededRaw).toLocaleString()} pcs`;
-        displayStock = `${Math.round(stockValueForCompare).toLocaleString()} pcs`;
-        
-        if (stockValueForCompare < totalNeededRaw) {
-          status = 'Manque';
-          displayOrder = `${Math.round(totalNeededRaw - stockValueForCompare).toLocaleString()} pcs`;
-        }
+    const aggregated = new Map();
+    allItems.forEach((item) => {
+      const key = item.name.toLowerCase();
+      const perPerson = parseQtyValue(item.qty);
+      if (aggregated.has(key)) {
+        const prev = aggregated.get(key);
+        aggregated.set(key, { ...prev, perPerson: prev.perPerson + perPerson });
       } else {
-        const displayUnit = unit === 'portions' ? 'portions' : unit;
-        displayRaw = `${Math.round(totalNeededRaw).toLocaleString()} ${displayUnit}`;
-        displayStock = `${Math.round(stockValueForCompare).toLocaleString()} ${displayUnit}`;
+        aggregated.set(key, { name: item.name, perPerson });
+      }
+    });
 
-        if (stockValueForCompare < totalNeededRaw) {
-          status = 'Manque';
-          displayOrder = `${Math.round(totalNeededRaw - stockValueForCompare).toLocaleString()} ${displayUnit}`;
-        }
+    return Array.from(aggregated.values()).map(({ name, perPerson }) => {
+      const nameLower = name.toLowerCase();
+      const { stock: stockDispo, unit: stockUnit } = findStockForItem(nameLower);
+      const totalNeeded = Math.round(perPerson * residents);
+
+      let displayRaw = `${totalNeeded.toLocaleString('fr-FR')} ${stockUnit}`;
+      let displayStock = `${stockDispo.toLocaleString('fr-FR')} ${stockUnit}`;
+      let neededCompare = totalNeeded;
+      let stockCompare = stockDispo;
+
+      if (stockUnit === 'kg') {
+        displayRaw = `${(totalNeeded / 100).toFixed(1)} kg`;
+        neededCompare = totalNeeded / 100;
+      } else if (stockUnit === 'L') {
+        displayRaw = `${(totalNeeded / 50).toFixed(1)} L`;
+        neededCompare = totalNeeded / 50;
       }
 
+      const isShortage = neededCompare > stockCompare;
       return {
-        name: item.name,
+        name,
         raw: displayRaw,
         stock: displayStock,
-        order: displayOrder,
-        status: status
+        order: isShortage
+          ? `${Math.ceil(neededCompare - stockCompare).toLocaleString('fr-FR')} ${stockUnit}`
+          : '—',
+        status: isShortage ? 'Manque' : 'OK',
       };
     });
   };
@@ -317,6 +311,32 @@ const MenusContent = () => {
     window.print();
   };
 
+  const getMenuForIso = (iso) =>
+    menus.find((m) => {
+      const menuDate = typeof m.date === 'string' ? m.date.slice(0, 10) : formatDateISO(new Date(m.date));
+      return menuDate === iso;
+    }) || null;
+
+  const formatDayFullLabel = (day) => {
+    const monthsFr = [
+      'janvier', 'février', 'mars', 'avril', 'mai', 'juin',
+      'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre',
+    ];
+    const d = day.dateObj;
+    return `${day.full} ${d.getDate()} ${monthsFr[d.getMonth()]} ${d.getFullYear()}`;
+  };
+
+  const renderPrintMealList = (mealText) => {
+    const items = mealTextToItems(mealText);
+    if (items.length === 0) return <li>—</li>;
+    return items.map((item, i) => (
+      <li key={i}>
+        {item.name}
+        {item.qty !== 'par pers.' ? ` (${item.qty})` : ''}
+      </li>
+    ));
+  };
+
   if (loading) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '80vh' }}>
@@ -329,14 +349,15 @@ const MenusContent = () => {
   }
 
   return (
-    <div style={{ padding: '32px', maxWidth: '1200px', margin: '0 auto', fontFamily: "'Inter', sans-serif" }}>
-      
-      {/* ── Header ── */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+    <div className="menus-page" style={{ padding: '32px', maxWidth: '1280px', margin: '0 auto', fontFamily: "'Inter', sans-serif" }}>
+    <div className="menus-print-area">
+
+      {/* ── Header (écran) ── */}
+      <div className="no-print" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
         <div>
           <h1 style={{ fontSize: '26px', fontWeight: '800', color: '#0f172a', margin: '0 0 6px 0' }}>Menus journaliers</h1>
           <p style={{ margin: 0, fontSize: '14px', color: '#64748b', fontWeight: '500' }}>
-            {getWeekRangeText()}
+            {getWeekRangeText()} · Année 2025-2026
           </p>
         </div>
         <div style={{ display: 'flex', gap: '12px' }}>
@@ -369,25 +390,59 @@ const MenusContent = () => {
         </div>
       </div>
 
-      {/* ── Week Calendar Bar ── */}
-      <div style={{ 
-        display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', 
-        gap: '12px', marginBottom: '24px' 
+      {/* ── Navigation semaine (écran) ── */}
+      <div className="no-print" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px', marginBottom: '16px' }} role="navigation" aria-label="Navigation par semaine">
+        <button
+          type="button"
+          onClick={() => changeWeek(-1)}
+          aria-label="Semaine précédente"
+          style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            width: '36px', height: '36px', border: '1px solid #e2e8f0',
+            borderRadius: '10px', backgroundColor: 'white', color: '#475569',
+            cursor: 'pointer',
+          }}
+        >
+          <ChevronLeft size={18} />
+        </button>
+        <span style={{ fontSize: '13px', fontWeight: '600', color: '#64748b', minWidth: '220px', textAlign: 'center' }}>
+          {getWeekRangeText()}
+        </span>
+        <button
+          type="button"
+          onClick={() => changeWeek(1)}
+          aria-label="Semaine suivante"
+          style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            width: '36px', height: '36px', border: '1px solid #e2e8f0',
+            borderRadius: '10px', backgroundColor: 'white', color: '#475569',
+            cursor: 'pointer',
+          }}
+        >
+          <ChevronRight size={18} />
+        </button>
+      </div>
+
+      {/* ── Week Calendar Bar (écran) ── */}
+      <div className="no-print" style={{
+        display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)',
+        gap: '12px', marginBottom: '24px'
       }}>
         {daysInfo.map((day, idx) => {
           const isSelected = selectedDayIndex === idx;
+          const isToday = day.iso === todayIso;
           return (
             <button
-              key={idx}
+              key={day.iso}
               onClick={() => setSelectedDayIndex(idx)}
               style={{
                 display: 'flex', flexDirection: 'column', alignItems: 'center', 
                 padding: '16px 12px', border: isSelected ? 'none' : '1px solid #e2e8f0', 
                 borderRadius: '12px', 
-                backgroundColor: isSelected ? '#0f766e' : 'white', 
+                background: isSelected ? 'linear-gradient(135deg, #14b8a6 0%, #0f766e 100%)' : 'white',
                 color: isSelected ? 'white' : '#64748b', 
                 cursor: 'pointer', transition: 'all 0.2s',
-                boxShadow: isSelected ? '0 10px 15px -3px rgba(15, 118, 110, 0.25)' : '0 1px 2px rgba(0,0,0,0.02)'
+                boxShadow: isSelected ? '0 10px 15px -3px rgba(15, 118, 110, 0.3)' : '0 1px 2px rgba(0,0,0,0.02)'
               }}
             >
               <span style={{ fontSize: '11px', fontWeight: '700', letterSpacing: '0.05em', opacity: isSelected ? 0.9 : 0.6, marginBottom: '6px' }}>
@@ -396,12 +451,18 @@ const MenusContent = () => {
               <span style={{ fontSize: '20px', fontWeight: '800', color: isSelected ? 'white' : '#1e293b' }}>
                 {day.date}
               </span>
+              {isToday && !isSelected && (
+                <span style={{ fontSize: '9px', fontWeight: '700', color: '#0f766e', marginTop: '4px' }}>
+                  Aujourd&apos;hui
+                </span>
+              )}
             </button>
           );
         })}
       </div>
 
-      {/* ── Day Header Indicator ── */}
+      {/* ── Vue écran : jour sélectionné ── */}
+      <div className="no-print">
       <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '32px' }}>
         <span style={{ 
           backgroundColor: '#f1f5f9', color: '#1e293b', 
@@ -439,7 +500,7 @@ const MenusContent = () => {
             
             <div style={{ padding: '20px', minHeight: '220px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                {getMealItems(selectedMenu.petit_dejeuner, 'pd').map((item, i) => (
+                {getMealItems(selectedMenu.petit_dejeuner).map((item, i) => (
                   <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', borderBottom: '1px dashed #f1f5f9', paddingBottom: '8px' }}>
                     <span style={{ color: '#475569', fontWeight: '500' }}>{item.name}</span>
                     <span style={{ color: '#0f172a', fontWeight: '700' }}>{item.qty}</span>
@@ -475,7 +536,7 @@ const MenusContent = () => {
             
             <div style={{ padding: '20px', minHeight: '220px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                {getMealItems(selectedMenu.dejeuner, 'dej').map((item, i) => (
+                {getMealItems(selectedMenu.dejeuner).map((item, i) => (
                   <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', borderBottom: '1px dashed #f1f5f9', paddingBottom: '8px' }}>
                     <span style={{ color: '#475569', fontWeight: '500' }}>{item.name}</span>
                     <span style={{ color: '#0f172a', fontWeight: '700' }}>{item.qty}</span>
@@ -511,7 +572,7 @@ const MenusContent = () => {
             
             <div style={{ padding: '20px', minHeight: '220px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                {getMealItems(selectedMenu.diner, 'din').map((item, i) => (
+                {getMealItems(selectedMenu.diner).map((item, i) => (
                   <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', borderBottom: '1px dashed #f1f5f9', paddingBottom: '8px' }}>
                     <span style={{ color: '#475569', fontWeight: '500' }}>{item.name}</span>
                     <span style={{ color: '#0f172a', fontWeight: '700' }}>{item.qty}</span>
@@ -528,18 +589,59 @@ const MenusContent = () => {
         </div>
       ) : (
         <div style={{ textAlign: 'center', padding: '40px', backgroundColor: 'white', borderRadius: '16px', border: '1px solid #e2e8f0' }}>
-          Aucun menu trouvé pour cette journée.
+          Aucun menu planifié pour le {getSelectedDayFullText()}.
         </div>
       )}
 
-      {/* ── Dynamic Ingredient Needs (Besoin total) ── */}
-      <div style={{ 
+      </div>
+
+      {/* ── Vue impression : menu de la semaine ── */}
+      <div className="menus-print-only">
+        <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+          <h1 style={{ fontSize: '16px', fontWeight: '800', margin: '0 0 6px', color: '#0f172a' }}>
+            Menu hebdomadaire – Internat ISTA Ouarzazate
+          </h1>
+          <p style={{ margin: '0 0 4px', fontSize: '13px', fontWeight: '600', color: '#0f766e' }}>
+            {getWeekRangeText()} · Année 2025-2026
+          </p>
+          <p style={{ margin: 0, fontSize: '10px', color: '#64748b' }}>
+            NB : des modifications peuvent être apportées pour circonstances exceptionnelles ou disponibilité des articles.
+          </p>
+        </div>
+
+        {daysInfo.map((day) => {
+          const menu = getMenuForIso(day.iso);
+          return (
+            <div key={day.iso} className="print-day-block">
+              <h3>{formatDayFullLabel(day)}</h3>
+              {menu ? (
+                <>
+                  <p className="print-meal-title">Petit-déjeuner ({menu.time_pd})</p>
+                  <ul className="print-meal-list">{renderPrintMealList(menu.petit_dejeuner)}</ul>
+                  <p className="print-meal-title">Déjeuner ({menu.time_dej})</p>
+                  <ul className="print-meal-list">{renderPrintMealList(menu.dejeuner)}</ul>
+                  <p className="print-meal-title">Dîner ({menu.time_din})</p>
+                  <ul className="print-meal-list">{renderPrintMealList(menu.diner)}</ul>
+                  <p style={{ margin: '8px 0 0', fontSize: '10px', color: '#64748b' }}>
+                    Résidents : {menu.residents} · Kcal : ~{menu.kcal_pd} / ~{menu.kcal_dej} / ~{menu.kcal_din}
+                  </p>
+                </>
+              ) : (
+                <p style={{ margin: 0, fontSize: '11px', color: '#94a3b8' }}>Aucun menu planifié.</p>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* ── Besoin total (écran uniquement) ── */}
+      <div className="no-print" style={{ 
         backgroundColor: 'white', borderRadius: '16px', 
         padding: '24px', border: '1px solid #e2e8f0', 
         boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.05)' 
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
-          <Scale size={20} color="#0f766e" />
+          <FileText size={20} color="#0f766e" />
           <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '800', color: '#0f172a' }}>
             Besoin total – {getSelectedDayFullText()} ({selectedMenu ? selectedMenu.residents : 450} résidents)
           </h3>
@@ -591,9 +693,11 @@ const MenusContent = () => {
         </table>
       </div>
 
+    </div>
+
       {/* ── Edit Menu Modal (Planifier menu) ── */}
       {isEditModalOpen && (
-        <div style={{
+        <div className="no-print" style={{
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
           backgroundColor: 'rgba(15, 23, 42, 0.4)', backdropFilter: 'blur(4px)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
@@ -606,7 +710,7 @@ const MenusContent = () => {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <div>
                 <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '800', color: '#0f172a' }}>
-                  Modifier le menu du {daysInfo[selectedDayIndex].full}
+                  Modifier le menu du {getSelectedDayFullText()}
                 </h3>
                 <p style={{ margin: '4px 0 0', fontSize: '12px', color: '#64748b' }}>
                   Ajustez les éléments et calories servis ce jour.
@@ -621,7 +725,32 @@ const MenusContent = () => {
             </div>
 
             <form onSubmit={handleEditSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              
+
+              <p style={{ margin: 0, fontSize: '11px', color: '#64748b', lineHeight: 1.5 }}>
+                Indiquez le prix en fin de ligne : <strong>Pain | 8 dh</strong> ou <strong>Harira 12 dh</strong>.
+                Alerte si un article ou le total dépasse {MENU_PRICE_LIMIT_DH} DH/résident.
+              </p>
+
+              {menuBudget.exceeds && (
+                <div style={{
+                  display: 'flex', gap: '10px', alignItems: 'flex-start', padding: '12px 14px',
+                  backgroundColor: '#fef2f2', border: '1px solid #fecaca', borderRadius: '10px',
+                }}>
+                  <AlertTriangle size={18} color="#ef4444" style={{ flexShrink: 0, marginTop: '1px' }} />
+                  <div>
+                    <p style={{ margin: 0, fontSize: '12px', fontWeight: '700', color: '#b91c1c' }}>
+                      Dépassement du seuil de {MENU_PRICE_LIMIT_DH} DH
+                    </p>
+                    <p style={{ margin: '4px 0 0', fontSize: '11px', color: '#991b1b' }}>
+                      Total estimé : {menuBudget.total.toFixed(2)} DH/résident
+                      {menuBudget.overItems.length > 0 && (
+                        <> · Articles : {menuBudget.overItems.map((i) => i.label).join(', ')}</>
+                      )}
+                    </p>
+                  </div>
+                </div>
+              )}
+
               <div>
                 <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#475569', marginBottom: '6px', textTransform: 'uppercase' }}>
                   Petit-déjeuner (Un produit par ligne)
