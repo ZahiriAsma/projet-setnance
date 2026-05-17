@@ -162,6 +162,42 @@ const FournisseursContent = () => {
           box-shadow: 0 20px 25px -5px rgba(15, 118, 110, 0.1), 0 10px 10px -5px rgba(15, 118, 110, 0.04) !important;
           border-color: rgba(15, 118, 110, 0.35) !important;
         }
+        .stat-card {
+          position: relative;
+          overflow: hidden;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+          cursor: pointer;
+        }
+        .stat-card:hover {
+          transform: translateY(-5px);
+          box-shadow: 0 15px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.03) !important;
+        }
+        .stat-card::after {
+          content: '';
+          position: absolute;
+          bottom: 0;
+          left: 0;
+          width: 100%;
+          height: 4px;
+          transform: scaleX(0);
+          transform-origin: left;
+          transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .stat-card:hover::after {
+          transform: scaleX(1);
+        }
+        .stat-card-blue::after {
+          background: linear-gradient(90deg, #2563eb, #10b981) !important;
+        }
+        .stat-card-green::after {
+          background: linear-gradient(90deg, #10b981, #0f766e) !important;
+        }
+        .stat-card-orange::after {
+          background: linear-gradient(90deg, #f59e0b, #eab308) !important;
+        }
+        .stat-card-indigo::after {
+          background: linear-gradient(90deg, #6366f1, #8b5cf6) !important;
+        }
       `}</style>
       
       {/* ── HEADER SECTION ── */}
@@ -194,11 +230,16 @@ const FournisseursContent = () => {
           { label: 'ACTIFS', value: fournisseurs.filter(f => f.statut === 'Actif').length, icon: <CheckCircle2 size={20} color="#10b981" />, bg: 'rgba(16,185,129,0.08)' },
           { label: 'NOTE MOYENNE', value: fournisseurs.length > 0 ? (fournisseurs.reduce((acc, f) => acc + parseFloat(f.note || 5.0), 0) / fournisseurs.length).toFixed(1) + '/5' : '5.0/5', icon: <Star size={20} color="#f59e0b" />, bg: 'rgba(245,158,11,0.08)' },
           { label: 'MARCHÉS EN COURS', value: '12', icon: <Award size={20} color="#6366f1" />, bg: 'rgba(99,102,241,0.08)' }
-        ].map((stat, i) => (
-          <div key={i} style={{ 
-            backgroundColor: 'white', borderRadius: '16px', padding: '20px', 
-            border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' 
-          }}>
+        ].map((stat, i) => {
+          const statClasses = ['stat-card-blue', 'stat-card-green', 'stat-card-orange', 'stat-card-indigo'];
+          return (
+            <div key={i} 
+              className={`stat-card ${statClasses[i]}`}
+              style={{ 
+                backgroundColor: 'white', borderRadius: '16px', padding: '20px', 
+                border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' 
+              }}
+            >
             <div>
               <div style={{ fontSize: '11px', fontWeight: '700', color: '#64748b', letterSpacing: '0.05em', marginBottom: '8px' }}>{stat.label}</div>
               <div style={{ fontSize: '28px', fontWeight: '800', color: '#0f172a' }}>{stat.value}</div>
@@ -207,7 +248,8 @@ const FournisseursContent = () => {
               {stat.icon}
             </div>
           </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* ── SEARCH BAR ── */}
