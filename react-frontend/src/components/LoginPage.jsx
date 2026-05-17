@@ -16,7 +16,7 @@ const inputStyle = (focused) => ({
 });
 
 const labelStyle = {
-    display: 'block', 
+    display: 'block',
     color: 'rgba(20, 184, 166, 0.8)',
     fontSize: '11px', fontWeight: '700',
     letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '8px',
@@ -181,8 +181,8 @@ const ForgotModal = ({ onClose }) => {
                                 alignItems: 'center', justifyContent: 'center', gap: '6px',
                                 transition: 'color 0.2s',
                             }}
-                            onMouseEnter={(e) => e.target.style.color = '#14b8a6'}
-                            onMouseLeave={(e) => e.target.style.color = 'rgba(255,255,255,0.4)'}>
+                                onMouseEnter={(e) => e.target.style.color = '#14b8a6'}
+                                onMouseLeave={(e) => e.target.style.color = 'rgba(255,255,255,0.4)'}>
                                 <ArrowLeft style={{ width: '14px', height: '14px' }} />
                                 Retour à la connexion
                             </button>
@@ -311,7 +311,7 @@ const LoginPage = () => {
                     }}>
                         <div style={{ marginBottom: '32px' }}>
                             <h2 style={{ color: '#ffffff', fontSize: '26px', fontWeight: '700', margin: '0 0 8px 0' }}>
-                                Bienvenue 👋
+                                Bienvenue
                             </h2>
                             <p style={{ color: 'rgba(255, 255, 255, 0.5)', fontSize: '13px', margin: 0 }}>
                                 Connectez-vous à votre espace de gestion
@@ -332,17 +332,17 @@ const LoginPage = () => {
                             <div>
                                 <label style={labelStyle}>Adresse Email</label>
                                 <div style={{ position: 'relative' }}>
-                                    <Mail style={{ 
-                                        position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', 
-                                        width: '18px', height: '18px', 
-                                        color: focused === 'email' ? '#14b8a6' : 'rgba(255,255,255,0.35)', 
-                                        transition: 'color 0.2s' 
+                                    <Mail style={{
+                                        position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)',
+                                        width: '18px', height: '18px',
+                                        color: focused === 'email' ? '#14b8a6' : 'rgba(255,255,255,0.35)',
+                                        transition: 'color 0.2s'
                                     }} />
-                                    <input 
-                                        type="email" value={email} onChange={e => setEmail(e.target.value)} 
-                                        placeholder="admin@ofppt.ma" required 
-                                        style={inputStyle(focused === 'email')} 
-                                        onFocus={() => setFocused('email')} onBlur={() => setFocused('')} 
+                                    <input
+                                        type="email" value={email} onChange={e => setEmail(e.target.value)}
+                                        placeholder="admin@ofppt.ma" required
+                                        style={inputStyle(focused === 'email')}
+                                        onFocus={() => setFocused('email')} onBlur={() => setFocused('')}
                                     />
                                 </div>
                             </div>
@@ -351,23 +351,23 @@ const LoginPage = () => {
                             <div>
                                 <label style={labelStyle}>Mot de passe</label>
                                 <div style={{ position: 'relative' }}>
-                                    <Lock style={{ 
-                                        position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', 
-                                        width: '18px', height: '18px', 
-                                        color: focused === 'pwd' ? '#14b8a6' : 'rgba(255,255,255,0.35)', 
-                                        transition: 'color 0.2s' 
+                                    <Lock style={{
+                                        position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)',
+                                        width: '18px', height: '18px',
+                                        color: focused === 'pwd' ? '#14b8a6' : 'rgba(255,255,255,0.35)',
+                                        transition: 'color 0.2s'
                                     }} />
-                                    <input 
-                                        type={showPassword ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)} 
-                                        placeholder="••••••••" required 
-                                        style={{ ...inputStyle(focused === 'pwd'), paddingRight: '44px' }} 
-                                        onFocus={() => setFocused('pwd')} onBlur={() => setFocused('')} 
+                                    <input
+                                        type={showPassword ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)}
+                                        placeholder="••••••••" required
+                                        style={{ ...inputStyle(focused === 'pwd'), paddingRight: '44px' }}
+                                        onFocus={() => setFocused('pwd')} onBlur={() => setFocused('')}
                                     />
-                                    <button 
-                                        type="button" onClick={() => setShowPassword(!showPassword)} 
-                                        style={{ 
-                                            position: 'absolute', right: '14px', top: '50%', transform: 'translateY(-50%)', 
-                                            background: 'none', border: 'none', cursor: 'pointer', 
+                                    <button
+                                        type="button" onClick={() => setShowPassword(!showPassword)}
+                                        style={{
+                                            position: 'absolute', right: '14px', top: '50%', transform: 'translateY(-50%)',
+                                            background: 'none', border: 'none', cursor: 'pointer',
                                             color: 'rgba(255,255,255,0.35)', padding: 0, display: 'flex',
                                             transition: 'color 0.2s',
                                         }}
@@ -399,8 +399,8 @@ const LoginPage = () => {
                                     <span onClick={() => setRememberMe(!rememberMe)}>Se souvenir de moi</span>
                                 </label>
 
-                                <button 
-                                    type="button" onClick={() => setShowForgot(true)} 
+                                <button
+                                    type="button" onClick={() => setShowForgot(true)}
                                     style={{
                                         background: 'none', border: 'none',
                                         color: '#14b8a6', cursor: 'pointer',
@@ -426,12 +426,12 @@ const LoginPage = () => {
                                 opacity: loading ? 0.8 : 1, transition: 'all 0.3s ease',
                                 boxShadow: '0 4px 20px rgba(14, 140, 116, 0.4)',
                             }}
-                            onMouseEnter={(e) => {
-                                if (!loading) e.target.style.boxShadow = '0 6px 24px rgba(14, 140, 116, 0.55)';
-                            }}
-                            onMouseLeave={(e) => {
-                                e.target.style.boxShadow = '0 4px 20px rgba(14, 140, 116, 0.4)';
-                            }}>
+                                onMouseEnter={(e) => {
+                                    if (!loading) e.target.style.boxShadow = '0 6px 24px rgba(14, 140, 116, 0.55)';
+                                }}
+                                onMouseLeave={(e) => {
+                                    e.target.style.boxShadow = '0 4px 20px rgba(14, 140, 116, 0.4)';
+                                }}>
                                 {loading
                                     ? <Loader2 style={{ width: '20px', height: '20px', animation: 'spin 1s linear infinite' }} />
                                     : <><LogIn style={{ width: '18px', height: '18px' }} /> Se connecter</>

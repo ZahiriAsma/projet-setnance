@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import MarchesContent from './MarchesContent';
+import FournisseursContent from './FournisseursContent';
 
 const DashboardPage = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -170,7 +171,11 @@ const DashboardPage = () => {
           <div style={{ display: 'flex', alignItems: 'center', fontSize: '13px', color: '#64748b', fontWeight: '500' }}>
             <span style={{ color: '#94a3b8' }}>InterNat Stock</span>
             <ChevronRight size={14} style={{ margin: '0 8px' }} />
-            <span style={{ color: '#0f172a', fontWeight: '600' }}>Tableau de bord</span>
+            <span style={{ color: '#0f172a', fontWeight: '600' }}>
+              {activeTab === 'dashboard' && 'Tableau de bord'}
+              {activeTab === 'marches' && 'Marchés'}
+              {activeTab === 'fournisseurs' && 'Fournisseurs'}
+            </span>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
@@ -385,6 +390,7 @@ const DashboardPage = () => {
             </div>
           )}
           {activeTab === 'marches' && <MarchesContent />}
+          {activeTab === 'fournisseurs' && <FournisseursContent />}
         </div>
       </main>
     </div>

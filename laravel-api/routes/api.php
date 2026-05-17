@@ -15,4 +15,8 @@ Route::middleware('auth:sanctum')->group(function () {
     // Marches routes
     Route::get('/marches', [MarcheController::class, 'index']);
     Route::post('/marches', [MarcheController::class, 'store']);
+
+    // Fournisseurs routes
+    Route::apiResource('fournisseurs', \App\Http\Controllers\Api\FournisseurController::class);
 });
+
