@@ -21,5 +21,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Menus routes
     Route::apiResource('menus', \App\Http\Controllers\Api\DailyMenuController::class);
+
+    Route::get('/search', [\App\Http\Controllers\Api\SearchController::class, 'index']);
 });
 

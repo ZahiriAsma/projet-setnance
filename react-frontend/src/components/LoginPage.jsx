@@ -410,7 +410,7 @@ const LoginPage = () => {
                                     onMouseEnter={(e) => e.target.style.color = '#0f766e'}
                                     onMouseLeave={(e) => e.target.style.color = '#0e8c74'}
                                 >
-                                    Mot de passe oublié ?
+                                    Oublié ?
                                 </button>
                             </div>
 
