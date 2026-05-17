@@ -153,6 +153,16 @@ const FournisseursContent = () => {
 
   return (
     <div style={{ padding: '32px', maxWidth: '1200px', margin: '0 auto', fontFamily: "'Inter', sans-serif" }}>
+      <style>{`
+        .supplier-card {
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        }
+        .supplier-card:hover {
+          transform: translateY(-6px);
+          box-shadow: 0 20px 25px -5px rgba(15, 118, 110, 0.1), 0 10px 10px -5px rgba(15, 118, 110, 0.04) !important;
+          border-color: rgba(15, 118, 110, 0.35) !important;
+        }
+      `}</style>
       
       {/* ── HEADER SECTION ── */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
@@ -239,10 +249,11 @@ const FournisseursContent = () => {
             return (
               <div 
                 key={f.id} 
+                className="supplier-card"
                 style={{ 
                   backgroundColor: 'white', borderRadius: '16px', border: '1px solid #e2e8f0', 
                   padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.02)', display: 'flex', flexDirection: 'column',
-                  transition: 'transform 0.2s', position: 'relative'
+                  position: 'relative', cursor: 'pointer'
                 }}
               >
                 {/* Header Card */}
