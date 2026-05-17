@@ -16,6 +16,7 @@ class DatabaseSeeder extends Seeder
             AdminSeeder::class,
             MarcheSeeder::class,
             FournisseurSeeder::class,
+            DailyMenuSeeder::class,
         ]);
     }
 }

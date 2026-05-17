@@ -84,7 +84,7 @@ const ForgotModal = ({ onClose }) => {
                             <Mail style={{ width: '28px', height: '28px', color: '#14b8a6' }} />
                         </div>
                         <h3 style={{ color: '#ffffff', fontSize: '20px', fontWeight: '700', margin: '0 0 10px' }}>
-                            Email envoyé ! ✅
+                            Email envoyé !
                         </h3>
                         <p style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: '14px', lineHeight: '1.6', margin: '0 0 8px' }}>
                             Un lien de réinitialisation a été envoyé à
@@ -118,7 +118,7 @@ const ForgotModal = ({ onClose }) => {
                                 <Mail style={{ width: '22px', height: '22px', color: '#14b8a6' }} />
                             </div>
                             <h3 style={{ color: '#ffffff', fontSize: '20px', fontWeight: '700', margin: '0 0 8px' }}>
-                                Mot de passe oublié ?
+                                oublié ?
                             </h3>
                             <p style={{ color: 'rgba(255, 255, 255, 0.5)', fontSize: '13px', margin: 0, lineHeight: '1.6' }}>
                                 Entrez votre adresse email. Vous recevrez un lien pour créer un nouveau mot de passe.
