@@ -86,6 +86,44 @@ const DashboardPage = () => {
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: '#f8fafc', fontFamily: "'Inter', sans-serif" }}>
+      <style>{`
+        .stat-card {
+          position: relative;
+          overflow: hidden;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+          cursor: pointer;
+        }
+        .stat-card:hover {
+          transform: translateY(-5px);
+          box-shadow: 0 15px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.03) !important;
+        }
+        .stat-card::after {
+          content: '';
+          position: absolute;
+          bottom: 0;
+          left: 0;
+          width: 100%;
+          height: 4px;
+          transform: scaleX(0);
+          transform-origin: left;
+          transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .stat-card:hover::after {
+          transform: scaleX(1);
+        }
+        .stat-card-blue::after {
+          background: linear-gradient(90deg, #2563eb, #10b981) !important;
+        }
+        .stat-card-green::after {
+          background: linear-gradient(90deg, #10b981, #0f766e) !important;
+        }
+        .stat-card-orange::after {
+          background: linear-gradient(90deg, #f59e0b, #eab308) !important;
+        }
+        .stat-card-red::after {
+          background: linear-gradient(90deg, #ef4444, #f87171) !important;
+        }
+      `}</style>
       
       {/* ── SIDEBAR ── */}
       <aside style={{ 
@@ -236,21 +274,27 @@ const DashboardPage = () => {
                 { label: 'PRODUITS EN STOCK', value: '1,247', trend: '+ 5% ce mois', icon: <Package size={20} color="#10b981" />, bg: 'rgba(16,185,129,0.1)', tColor: '#10b981' },
                 { label: 'FOURNISSEURS', value: '38', trend: '4 en attente', icon: <Users size={20} color="#2563eb" />, bg: 'rgba(37,99,235,0.1)', tColor: '#f59e0b' },
                 { label: 'ALERTES DE STOCK', value: '5', trend: 'Action requise', icon: <AlertCircle size={20} color="#ef4444" />, bg: 'rgba(239,68,68,0.1)', tColor: '#ef4444' }
-              ].map((stat, i) => (
-                <div key={i} style={{ backgroundColor: 'white', borderRadius: '16px', padding: '20px', border: '1px solid #e2e8f0', boxShadow: '0 1px 2px rgba(0,0,0,0.02)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
-                    <div style={{ fontSize: '11px', fontWeight: '700', color: '#64748b', letterSpacing: '0.05em' }}>{stat.label}</div>
-                    <div style={{ width: '36px', height: '36px', borderRadius: '10px', backgroundColor: stat.bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      {stat.icon}
+              ].map((stat, i) => {
+                const classes = ['stat-card-blue', 'stat-card-green', 'stat-card-orange', 'stat-card-red'];
+                return (
+                  <div key={i} 
+                    className={`stat-card ${classes[i]}`}
+                    style={{ backgroundColor: 'white', borderRadius: '16px', padding: '20px', border: '1px solid #e2e8f0', boxShadow: '0 1px 2px rgba(0,0,0,0.02)' }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+                      <div style={{ fontSize: '11px', fontWeight: '700', color: '#64748b', letterSpacing: '0.05em' }}>{stat.label}</div>
+                      <div style={{ width: '36px', height: '36px', borderRadius: '10px', backgroundColor: stat.bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        {stat.icon}
+                      </div>
+                    </div>
+                    <div style={{ fontSize: '28px', fontWeight: '700', color: '#0f172a', marginBottom: '8px' }}>{stat.value}</div>
+                    <div style={{ fontSize: '12px', fontWeight: '600', color: stat.tColor, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      {stat.trend.includes('+') ? <TrendingUp size={14} /> : (stat.tColor === '#ef4444' ? <AlertTriangle size={14} /> : null)}
+                      {stat.trend}
                     </div>
                   </div>
-                  <div style={{ fontSize: '28px', fontWeight: '700', color: '#0f172a', marginBottom: '8px' }}>{stat.value}</div>
-                  <div style={{ fontSize: '12px', fontWeight: '600', color: stat.tColor, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    {stat.trend.includes('+') ? <TrendingUp size={14} /> : (stat.tColor === '#ef4444' ? <AlertTriangle size={14} /> : null)}
-                    {stat.trend}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             {/* Charts Section */}

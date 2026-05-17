@@ -62,6 +62,44 @@ const MarchesContent = () => {
 
   return (
     <div style={{ padding: '32px', maxWidth: '1200px', margin: '0 auto' }}>
+      <style>{`
+        .stat-card {
+          position: relative;
+          overflow: hidden;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+          cursor: pointer;
+        }
+        .stat-card:hover {
+          transform: translateY(-5px);
+          box-shadow: 0 15px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.03) !important;
+        }
+        .stat-card::after {
+          content: '';
+          position: absolute;
+          bottom: 0;
+          left: 0;
+          width: 100%;
+          height: 4px;
+          transform: scaleX(0);
+          transform-origin: left;
+          transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .stat-card:hover::after {
+          transform: scaleX(1);
+        }
+        .stat-card-blue::after {
+          background: linear-gradient(90deg, #3b82f6, #60a5fa) !important;
+        }
+        .stat-card-green::after {
+          background: linear-gradient(90deg, #10b981, #0f766e) !important;
+        }
+        .stat-card-orange::after {
+          background: linear-gradient(90deg, #f59e0b, #eab308) !important;
+        }
+        .stat-card-dark::after {
+          background: linear-gradient(90deg, #0f172a, #334155) !important;
+        }
+      `}</style>
       
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
@@ -97,15 +135,21 @@ const MarchesContent = () => {
           { label: 'Actifs', value: marches.filter(m => m.statut === 'Actif').length || 0, color: '#10b981' },
           { label: 'En cours', value: marches.filter(m => m.statut === 'En cours').length || 0, color: '#f59e0b' },
           { label: 'Budget total (MAD)', value: (marches.reduce((sum, m) => sum + parseFloat(m.budget || 0), 0) / 1000).toFixed(0) + 'K', color: '#3b82f6' }
-        ].map((stat, i) => (
-          <div key={i} style={{ 
-            flex: 1, backgroundColor: 'white', padding: '20px', borderRadius: '12px', 
-            border: '1px solid #e2e8f0', textAlign: 'center', boxShadow: '0 1px 2px rgba(0,0,0,0.02)' 
-          }}>
-            <div style={{ fontSize: '28px', fontWeight: '700', color: stat.color, marginBottom: '4px' }}>{stat.value}</div>
-            <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '600', textTransform: 'uppercase' }}>{stat.label}</div>
-          </div>
-        ))}
+        ].map((stat, i) => {
+          const classes = ['stat-card-dark', 'stat-card-green', 'stat-card-orange', 'stat-card-blue'];
+          return (
+            <div key={i} 
+              className={`stat-card ${classes[i]}`}
+              style={{ 
+                flex: 1, backgroundColor: 'white', padding: '20px', borderRadius: '12px', 
+                border: '1px solid #e2e8f0', textAlign: 'center', boxShadow: '0 1px 2px rgba(0,0,0,0.02)' 
+              }}
+            >
+              <div style={{ fontSize: '28px', fontWeight: '700', color: stat.color, marginBottom: '4px' }}>{stat.value}</div>
+              <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '600', textTransform: 'uppercase' }}>{stat.label}</div>
+            </div>
+          );
+        })}
       </div>
 
       {/* Grid of Marches */}
