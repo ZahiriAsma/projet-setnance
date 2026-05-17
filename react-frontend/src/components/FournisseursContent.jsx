@@ -233,7 +233,7 @@ const FournisseursContent = () => {
         </div>
       ) : (
         /* ── SUPPLIERS GRID ── */
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: '20px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px' }}>
           {filteredFournisseurs.map((f) => {
             const visual = getCardStats(f);
             return (
