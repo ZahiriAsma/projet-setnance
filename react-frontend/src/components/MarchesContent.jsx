@@ -4,6 +4,7 @@ import api from '../api/axios';
 
 const MarchesContent = () => {
   const [marches, setMarches] = useState([]);
+  const [fournisseurs, setFournisseurs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [formData, setFormData] = useState({
@@ -16,6 +17,7 @@ const MarchesContent = () => {
 
   useEffect(() => {
     fetchMarches();
+    fetchFournisseurs();
   }, []);
 
   const fetchMarches = async () => {
@@ -30,6 +32,21 @@ const MarchesContent = () => {
     }
   };
 
+  const fetchFournisseurs = async () => {
+    try {
+      const response = await api.get('/fournisseurs');
+      setFournisseurs(response.data);
+      if (response.data.length > 0) {
+        setFormData(prev => ({
+          ...prev,
+          id_fournisseur: response.data[0].id.toString()
+        }));
+      }
+    } catch (error) {
+      console.error('Erreur lors du chargement des fournisseurs', error);
+    }
+  };
+
   const handleInputChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
@@ -40,7 +57,7 @@ const MarchesContent = () => {
     try {
       await api.post('/marches', formData);
       setShowModal(false);
-      setFormData({ titulaire: '', id_fournisseur: '', date_debut: '', date_fin: '' });
+      setFormData({ titulaire: '', id_fournisseur: fournisseurs[0]?.id?.toString() || '', date_debut: '', date_fin: '' });
       fetchMarches(); // Refresh
     } catch (error) {
       console.error('Erreur lors de l\'ajout', error.response || error);
@@ -262,12 +279,30 @@ const MarchesContent = () => {
               </div>
               
               <div>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#475569', marginBottom: '6px' }}>ID Fournisseur</label>
-                <input 
-                  type="number" name="id_fournisseur" value={formData.id_fournisseur} onChange={handleInputChange} required
-                  style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none' }}
-                  placeholder="Ex: 1"
-                />
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#475569', marginBottom: '6px' }}>Fournisseur *</label>
+                <select 
+                  name="id_fournisseur" 
+                  value={formData.id_fournisseur} 
+                  onChange={handleInputChange} 
+                  required
+                  style={{ 
+                    width: '100%', 
+                    padding: '10px 12px', 
+                    borderRadius: '8px', 
+                    border: '1px solid #cbd5e1', 
+                    outline: 'none', 
+                    backgroundColor: 'white',
+                    fontSize: '14px',
+                    color: '#334155' 
+                  }}
+                >
+                  <option value="" disabled>-- Sélectionner un fournisseur --</option>
+                  {fournisseurs.map(f => (
+                    <option key={f.id} value={f.id}>
+                      {f.raisonSociale}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div style={{ display: 'flex', gap: '16px' }}>
