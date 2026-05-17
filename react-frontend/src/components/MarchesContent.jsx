@@ -85,18 +85,10 @@ const MarchesContent = () => {
               <FileText size={20} color="#0f766e" /> Bon de commande
             </h3>
             <div style={{ display: 'flex', gap: '10px' }}>
-              <button style={{
-                display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px',
-                backgroundColor: 'white', border: '1px solid #cbd5e1', borderRadius: '8px',
-                color: '#475569', fontSize: '12px', fontWeight: '600', cursor: 'pointer'
-              }}>
+              <button className="btn-secondary" style={{ padding: '6px 12px' }}>
                 <Printer size={14} />
               </button>
-              <button style={{
-                display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 14px',
-                backgroundColor: '#0f766e', border: 'none', borderRadius: '8px',
-                color: 'white', fontSize: '12px', fontWeight: '600', cursor: 'pointer'
-              }}>
+              <button className="btn-primary" style={{ padding: '6px 14px' }}>
                 <Plus size={14} /> Nouveau BC
               </button>
             </div>
@@ -236,10 +228,7 @@ const MarchesContent = () => {
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px' }}>
           <button 
             onClick={() => setSelectedMarche(null)}
-            style={{
-              background: 'none', border: 'none', display: 'flex', alignItems: 'center', gap: '4px',
-              color: '#475569', fontWeight: '600', fontSize: '13px', cursor: 'pointer', padding: 0
-            }}
+            className="btn-back"
           >
             <ChevronLeft size={16} /> Retour aux marchés
           </button>
@@ -273,18 +262,10 @@ const MarchesContent = () => {
             </div>
             
             <div style={{ display: 'flex', gap: '10px' }}>
-              <button style={{ 
-                display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 16px', 
-                backgroundColor: 'white', border: '1px solid #cbd5e1', borderRadius: '8px', 
-                color: '#475569', fontSize: '13px', fontWeight: '600', cursor: 'pointer' 
-              }}>
+              <button className="btn-secondary">
                 <Printer size={15} /> Imprimer
               </button>
-              <button style={{ 
-                display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 16px', 
-                backgroundColor: '#0f766e', border: 'none', borderRadius: '8px', 
-                color: 'white', fontSize: '13px', fontWeight: '600', cursor: 'pointer' 
-              }}>
+              <button className="btn-primary">
                 Modifier
               </button>
             </div>
@@ -349,14 +330,7 @@ const MarchesContent = () => {
                 <button
                   key={tab.id}
                   onClick={() => setActiveDocTab(tab.id)}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: '10px', width: '100%',
-                    padding: '12px 16px', borderRadius: '10px', border: 'none',
-                    backgroundColor: isActive ? 'rgba(15, 118, 110, 0.08)' : 'transparent',
-                    color: isActive ? '#0f766e' : '#475569',
-                    fontWeight: isActive ? '700' : '500', fontSize: '13px', cursor: 'pointer',
-                    textAlign: 'left', transition: 'all 0.2s'
-                  }}
+                  className={`doc-tab-button ${isActive ? 'doc-tab-button-active' : 'doc-tab-button-inactive'}`}
                 >
                   <FileText size={15} style={{ opacity: isActive ? 1 : 0.7 }} />
                   {tab.label}
@@ -428,6 +402,116 @@ const MarchesContent = () => {
         .stat-card-dark::after {
           background: linear-gradient(90deg, #0f172a, #334155) !important;
         }
+
+        /* Interactive Document Tab Button Styles */
+        .doc-tab-button {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          width: 100%;
+          padding: 12px 16px;
+          border-radius: 10px;
+          font-size: 13px;
+          cursor: pointer;
+          text-align: left;
+          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .doc-tab-button-inactive {
+          background-color: #f8fafc;
+          color: #475569;
+          border: 1px solid #e2e8f0;
+          font-weight: 500;
+        }
+        .doc-tab-button-inactive:hover {
+          background-color: #f1f5f9;
+          color: #0f766e;
+          border-color: #cbd5e1;
+          transform: translateX(4px);
+        }
+        .doc-tab-button-inactive:active {
+          background-color: #e2e8f0;
+          transform: scale(0.98);
+        }
+        .doc-tab-button-active {
+          background-color: #0f766e;
+          color: #ffffff;
+          border: 1px solid #0f766e;
+          font-weight: 700;
+          box-shadow: 0 4px 12px rgba(15, 118, 110, 0.25);
+        }
+        .doc-tab-button-active:active {
+          transform: scale(0.98);
+        }
+
+        /* Generic Action Buttons */
+        .btn-primary {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 8px 16px;
+          background-color: #0f766e;
+          border: 1px solid #0f766e;
+          border-radius: 8px;
+          color: white;
+          font-weight: 600;
+          font-size: 13px;
+          cursor: pointer;
+          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .btn-primary:hover {
+          background-color: #0d5c56;
+          border-color: #0d5c56;
+          box-shadow: 0 4px 12px rgba(15, 118, 110, 0.3);
+          transform: translateY(-1px);
+        }
+        .btn-primary:active {
+          background-color: #0b4a45;
+          border-color: #0b4a45;
+          transform: translateY(1px);
+        }
+
+        .btn-secondary {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 8px 16px;
+          background-color: white;
+          border: 1px solid #cbd5e1;
+          border-radius: 8px;
+          color: #475569;
+          font-weight: 600;
+          font-size: 13px;
+          cursor: pointer;
+          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .btn-secondary:hover {
+          background-color: #f8fafc;
+          border-color: #94a3b8;
+          color: #0f766e;
+          transform: translateY(-1px);
+        }
+        .btn-secondary:active {
+          background-color: #f1f5f9;
+          transform: translateY(1px);
+        }
+
+        .btn-back {
+          background: none;
+          border: none;
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          color: #475569;
+          font-weight: 600;
+          font-size: 13px;
+          cursor: pointer;
+          padding: 0;
+          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .btn-back:hover {
+          color: #0f766e;
+          transform: translateX(-3px);
+        }
       `}</style>
       
       {selectedMarche ? (
@@ -441,20 +525,12 @@ const MarchesContent = () => {
           <p style={{ color: '#64748b', fontSize: '13px', margin: 0 }}>Gérez vos marchés, commandes et documents associés</p>
         </div>
         <div style={{ display: 'flex', gap: '12px' }}>
-          <button style={{ 
-            display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', 
-            backgroundColor: 'white', border: '1px solid #e2e8f0', borderRadius: '8px', 
-            color: '#475569', fontWeight: '600', fontSize: '13px', cursor: 'pointer' 
-          }}>
+          <button className="btn-secondary">
             <Filter size={16} /> Filtres
           </button>
           <button 
             onClick={() => setShowModal(true)}
-            style={{ 
-              display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', 
-              backgroundColor: '#0f766e', border: 'none', borderRadius: '8px', 
-              color: 'white', fontWeight: '600', fontSize: '13px', cursor: 'pointer' 
-            }}
+            className="btn-primary"
           >
             <Plus size={16} /> Ajouter marché
           </button>
@@ -535,20 +611,13 @@ const MarchesContent = () => {
                 </div>
 
                 <div style={{ display: 'flex', gap: '12px' }}>
-                  <button style={{ 
-                    flex: 1, padding: '8px', backgroundColor: 'white', border: '1px solid #e2e8f0', 
-                    borderRadius: '8px', color: '#475569', fontSize: '13px', fontWeight: '600', 
-                    display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '6px', cursor: 'pointer' 
-                  }}>
+                  <button className="btn-secondary" style={{ flex: 1, padding: '8px', justifyContent: 'center' }}>
                     <Archive size={14} /> Archive
                   </button>
                   <button 
                     onClick={() => setSelectedMarche(marche)}
-                    style={{ 
-                      flex: 1, padding: '8px', backgroundColor: '#0f766e', border: 'none', 
-                      borderRadius: '8px', color: 'white', fontSize: '13px', fontWeight: '600', 
-                      display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '6px', cursor: 'pointer' 
-                    }}
+                    className="btn-primary"
+                    style={{ flex: 1, padding: '8px', justifyContent: 'center' }}
                   >
                     <FolderOpen size={14} /> Ouvrir
                   </button>
@@ -648,13 +717,15 @@ const MarchesContent = () => {
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '16px' }}>
                 <button 
                   type="button" onClick={() => setShowModal(false)}
-                  style={{ padding: '10px 20px', backgroundColor: 'transparent', border: '1px solid #cbd5e1', borderRadius: '8px', color: '#475569', fontWeight: '600', cursor: 'pointer' }}
+                  className="btn-secondary"
+                  style={{ padding: '10px 20px' }}
                 >
                   Annuler
                 </button>
                 <button 
                   type="submit" disabled={submitting}
-                  style={{ padding: '10px 20px', backgroundColor: '#0f766e', border: 'none', borderRadius: '8px', color: 'white', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
+                  className="btn-primary"
+                  style={{ padding: '10px 20px' }}
                 >
                   {submitting ? 'Enregistrement...' : 'Ajouter'}
                 </button>
