@@ -6,6 +6,7 @@ import {
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import MarchesContent from './MarchesContent';
 import FournisseursContent from './FournisseursContent';
+import MenusContent from './MenusContent';
 
 const DashboardPage = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -213,6 +214,7 @@ const DashboardPage = () => {
               {activeTab === 'dashboard' && 'Tableau de bord'}
               {activeTab === 'marches' && 'Marchés'}
               {activeTab === 'fournisseurs' && 'Fournisseurs'}
+              {activeTab === 'menus' && 'Menus journaliers'}
             </span>
           </div>
 
@@ -435,6 +437,7 @@ const DashboardPage = () => {
           )}
           {activeTab === 'marches' && <MarchesContent />}
           {activeTab === 'fournisseurs' && <FournisseursContent />}
+          {activeTab === 'menus' && <MenusContent />}
         </div>
       </main>
     </div>

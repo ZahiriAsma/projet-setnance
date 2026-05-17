@@ -18,5 +18,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Fournisseurs routes
     Route::apiResource('fournisseurs', \App\Http\Controllers\Api\FournisseurController::class);
+
+    // Menus routes
+    Route::apiResource('menus', \App\Http\Controllers\Api\DailyMenuController::class);
 });
 
