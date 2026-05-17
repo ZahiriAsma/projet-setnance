@@ -117,4 +117,37 @@ class AuthController extends Controller
     {
         return response()->json($request->user());
     }
+
+    /* ─── Update Profile ─── */
+    public function updateProfile(Request $request)
+    {
+        $user = $request->user();
+
+        $request->validate([
+            'name'     => 'required|string|max:255',
+            'email'    => 'required|string|email|max:255|unique:users,email,' . $user->id,
+            'password' => 'nullable|string|min:6|confirmed',
+        ], [
+            'name.required'      => 'Le nom est obligatoire.',
+            'email.required'     => "L'adresse email est obligatoire.",
+            'email.email'        => "L'adresse email est invalide.",
+            'email.unique'       => "Cette adresse email est déjà utilisée.",
+            'password.min'       => 'Le mot de passe doit contenir au moins 6 caractères.',
+            'password.confirmed' => 'Les mots de passe de confirmation ne correspondent pas.',
+        ]);
+
+        $user->name = $request->name;
+        $user->email = $request->email;
+
+        if ($request->filled('password')) {
+            $user->password = Hash::make($request->password);
+        }
+
+        $user->save();
+
+        return response()->json([
+            'message' => 'Profil mis à jour avec succès.',
+            'user'    => $user
+        ]);
+    }
 }

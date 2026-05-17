@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Plus, Filter, Folder, Calendar, DollarSign, Archive, FolderOpen,
-  ChevronLeft, FileText, Printer, Download, Edit2
+  ChevronLeft, FileText, Printer, Download, Edit2, Trash2, Eye
 } from 'lucide-react';
 import api from '../api/axios';
 
@@ -20,9 +20,40 @@ const MarchesContent = () => {
   const [selectedMarche, setSelectedMarche] = useState(null);
   const [activeDocTab, setActiveDocTab] = useState('bc');
 
+  // Dynamic state for Bons de commande documents (now loaded from database)
+  const [bcs, setBcs] = useState([]);
+  const [showBcModal, setShowBcModal] = useState(false);
+  const [newBcData, setNewBcData] = useState({
+    numeroBC: '',
+    dateEmission: new Date().toISOString().split('T')[0],
+    budget: 'Budget de Fonctionnement',
+    exercice: new Date().getFullYear(),
+    rubrique: '',
+    referenceMarcheCadre: '',
+    lieuLivraison: 'Internat OFPPT Casablanca',
+    conditionsGenerales: 'Livraison sous 5 jours. Paiement à 60 jours.',
+    conditionsParticulieres: '',
+    montantHT: '',
+    montantTVA: '',
+    montantTTC: '',
+    statut: 'En cours',
+    fournisseur_id: ''
+  });
+  const [editingBc, setEditingBc] = useState(null);
+  const [selectedBcForView, setSelectedBcForView] = useState(null);
+
+  // Dynamic state for Bon de commande items (used when viewing a BC)
+  const [bcItems, setBcItems] = useState([
+    { id: 1, label: 'Huile de table 5L', unit: 'Carton', qty: 40, price: 180 },
+    { id: 2, label: 'Sucre en poudre 50kg', unit: 'Sac', qty: 20, price: 350 },
+    { id: 3, label: 'Riz long grain 25kg', unit: 'Sac', qty: 30, price: 280 },
+    { id: 4, label: 'Semoule fine 25kg', unit: 'Sac', qty: 25, price: 210 }
+  ]);
+
   useEffect(() => {
     fetchMarches();
     fetchFournisseurs();
+    fetchBcs();
   }, []);
 
   const fetchMarches = async () => {
@@ -52,6 +83,15 @@ const MarchesContent = () => {
     }
   };
 
+  const fetchBcs = async () => {
+    try {
+      const response = await api.get('/bon-commandes');
+      setBcs(response.data);
+    } catch (error) {
+      console.error('Erreur lors du chargement des bons de commande', error);
+    }
+  };
+
   const handleInputChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
@@ -72,6 +112,65 @@ const MarchesContent = () => {
     }
   };
 
+  const handleSaveBc = async (e) => {
+    e.preventDefault();
+    if (!newBcData.numeroBC || !newBcData.dateEmission) {
+      alert("Veuillez remplir tous les champs obligatoires.");
+      return;
+    }
+
+    try {
+      const payload = {
+        ...newBcData,
+        fournisseur_id: newBcData.fournisseur_id || selectedMarche?.id_fournisseur || null
+      };
+
+      if (editingBc) {
+        // Edit mode in database
+        const response = await api.put(`/bon-commandes/${editingBc.id}`, payload);
+        setBcs(bcs.map(bc => bc.id === editingBc.id ? response.data : bc));
+        setEditingBc(null);
+      } else {
+        // Add mode in database
+        const response = await api.post('/bon-commandes', payload);
+        setBcs([...bcs, response.data]);
+      }
+
+      setNewBcData({
+        numeroBC: '',
+        dateEmission: new Date().toISOString().split('T')[0],
+        budget: 'Budget de Fonctionnement',
+        exercice: new Date().getFullYear(),
+        rubrique: '',
+        referenceMarcheCadre: '',
+        lieuLivraison: 'Internat OFPPT Casablanca',
+        conditionsGenerales: 'Livraison sous 5 jours. Paiement à 60 jours.',
+        conditionsParticulieres: '',
+        montantHT: '',
+        montantTVA: '',
+        montantTTC: '',
+        statut: 'En cours',
+        fournisseur_id: ''
+      });
+      setShowBcModal(false);
+    } catch (error) {
+      console.error("Erreur lors de la sauvegarde du bon de commande", error.response || error);
+      alert("Erreur: " + (error.response?.data?.message || error.message));
+    }
+  };
+
+  const handleDeleteBc = async (id) => {
+    if (window.confirm("Êtes-vous sûr de vouloir supprimer ce bon de commande ?")) {
+      try {
+        await api.delete(`/bon-commandes/${id}`);
+        setBcs(bcs.filter(bc => bc.id !== id));
+      } catch (error) {
+        console.error("Erreur lors de la suppression du bon de commande", error.response || error);
+        alert("Erreur: " + (error.response?.data?.message || error.message));
+      }
+    }
+  };
+
   const renderDocumentContent = () => {
     const sName = fournisseurs.find(f => f.id === selectedMarche.id_fournisseur)?.raisonSociale || 'DISMA Maroc';
     const sICE = fournisseurs.find(f => f.id === selectedMarche.id_fournisseur)?.ice || '001234567000021';
@@ -82,122 +181,136 @@ const MarchesContent = () => {
           {/* Header */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
             <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '700', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <FileText size={20} color="#0f766e" /> Bon de commande
+              <FileText size={20} color="#0f766e" /> Bons de commande
             </h3>
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <button className="btn-secondary" style={{ padding: '6px 12px' }}>
-                <Printer size={14} />
-              </button>
-              <button className="btn-primary" style={{ padding: '6px 14px' }}>
-                <Plus size={14} /> Nouveau BC
-              </button>
-            </div>
+            <button 
+              onClick={() => {
+                setEditingBc(null);
+                setNewBcData({
+                  numeroBC: `BC-${new Date().getFullYear()}-089-00${bcs.length + 1}`,
+                  dateEmission: new Date().toISOString().split('T')[0],
+                  budget: 'Budget de Fonctionnement',
+                  exercice: new Date().getFullYear(),
+                  rubrique: 'Alimentation générale',
+                  referenceMarcheCadre: selectedMarche ? `MC-MARCHE-${selectedMarche.id}` : '',
+                  lieuLivraison: 'Internat OFPPT Casablanca',
+                  conditionsGenerales: 'Livraison sous 5 jours. Paiement à 60 jours.',
+                  conditionsParticulieres: 'Produits frais uniquement.',
+                  montantHT: '27650.00',
+                  montantTVA: '5530.00',
+                  montantTTC: '33180.00',
+                  statut: 'En cours',
+                  fournisseur_id: selectedMarche ? selectedMarche.id_fournisseur.toString() : ''
+                });
+                setShowBcModal(true);
+              }} 
+              className="btn-primary" 
+              style={{ padding: '8px 16px', display: 'flex', alignItems: 'center', gap: '8px' }}
+            >
+              <Plus size={15} /> Nouveau BC
+            </button>
           </div>
 
-          {/* Invoice Document styled exactly as screenshot */}
+          {/* Simple Beautiful Table */}
           <div style={{
             border: '1px solid #e2e8f0', borderRadius: '12px', overflow: 'hidden',
-            boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)'
+            boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)'
           }}>
-            {/* Title Bar */}
-            <div style={{ 
-              backgroundColor: '#1e293b', padding: '14px 20px', display: 'flex', 
-              justifyContent: 'space-between', alignItems: 'center', color: 'white' 
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <span style={{ fontSize: '14px', fontWeight: '700', letterSpacing: '0.05em' }}>BC-2024-089-001</span>
-                <span style={{ 
-                  backgroundColor: '#10b981', color: 'white', padding: '2px 8px', 
-                  borderRadius: '10px', fontSize: '10px', fontWeight: '700' 
-                }}>Validé</span>
-              </div>
-              <button style={{ background: 'none', border: 'none', color: '#cbd5e1', cursor: 'pointer', padding: 0 }}>
-                <Download size={16} />
-              </button>
-            </div>
-
-            {/* Paper Body */}
-            <div style={{ padding: '32px', fontFamily: "'Inter', sans-serif" }}>
-              
-              {/* Top header logos / refs */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '32px' }}>
-                <div>
-                  <h4 style={{ margin: '0 0 4px 0', fontSize: '16px', fontWeight: '800', color: '#0f172a', letterSpacing: '-0.02em' }}>OFPPT</h4>
-                  <p style={{ margin: 0, fontSize: '11px', color: '#64748b', fontWeight: '500' }}>Internat OFPPT Casablanca<br />Direction régionale</p>
-                </div>
-                <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '4px' }}>Réf: <span style={{ fontWeight: '700', color: '#0f172a' }}>BC-2024-089-001</span></div>
-                  <div style={{ fontSize: '12px', color: '#64748b' }}>Date: <span style={{ fontWeight: '700', color: '#0f172a' }}>15/01/2024</span></div>
-                </div>
-              </div>
-
-              <h3 style={{ textAlign: 'center', fontSize: '18px', fontWeight: '800', color: '#0f172a', letterSpacing: '0.1em', margin: '0 0 28px 0', borderBottom: '2px solid #0f172a', paddingBottom: '12px' }}>
-                BON DE COMMANDE
-              </h3>
-
-              {/* Supplier & Delivery Info Cards */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '32px' }}>
-                <div style={{ border: '1px solid #e2e8f0', borderRadius: '10px', padding: '16px', backgroundColor: '#f8fafc' }}>
-                  <div style={{ fontSize: '10px', color: '#94a3b8', fontWeight: '700', letterSpacing: '0.05em', marginBottom: '6px', textTransform: 'uppercase' }}>Fournisseur</div>
-                  <div style={{ fontSize: '13px', fontWeight: '700', color: '#0f172a', marginBottom: '4px' }}>{sName}</div>
-                  <div style={{ fontSize: '11px', color: '#64748b' }}>ICE: {sICE}</div>
-                </div>
-                <div style={{ border: '1px solid #e2e8f0', borderRadius: '10px', padding: '16px', backgroundColor: '#f8fafc' }}>
-                  <div style={{ fontSize: '10px', color: '#94a3b8', fontWeight: '700', letterSpacing: '0.05em', marginBottom: '6px', textTransform: 'uppercase' }}>Livraison prévue</div>
-                  <div style={{ fontSize: '13px', fontWeight: '700', color: '#0f172a', marginBottom: '4px' }}>20/01/2024</div>
-                  <div style={{ fontSize: '11px', color: '#64748b' }}>Internat OFPPT Casa</div>
-                </div>
-              </div>
-
-              {/* Table */}
-              <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '32px' }}>
+            <div style={{ padding: '24px', fontFamily: "'Inter', sans-serif" }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
                   <tr style={{ borderBottom: '2px solid #cbd5e1', textAlign: 'left' }}>
-                    <th style={{ padding: '10px 8px', fontSize: '11px', fontWeight: '700', color: '#64748b', width: '30px' }}>#</th>
-                    <th style={{ padding: '10px 8px', fontSize: '11px', fontWeight: '700', color: '#64748b' }}>DÉSIGNATION</th>
-                    <th style={{ padding: '10px 8px', fontSize: '11px', fontWeight: '700', color: '#64748b', width: '60px' }}>UNITÉ</th>
-                    <th style={{ padding: '10px 8px', fontSize: '11px', fontWeight: '700', color: '#64748b', width: '50px', textAlign: 'center' }}>QTÉ</th>
-                    <th style={{ padding: '10px 8px', fontSize: '11px', fontWeight: '700', color: '#64748b', width: '90px', textAlign: 'right' }}>PU (MAD)</th>
-                    <th style={{ padding: '10px 8px', fontSize: '11px', fontWeight: '700', color: '#64748b', width: '100px', textAlign: 'right' }}>TOTAL</th>
+                    <th style={{ padding: '12px 8px', fontSize: '11px', fontWeight: '700', color: '#64748b', width: '40px' }}>#</th>
+                    <th style={{ padding: '12px 8px', fontSize: '11px', fontWeight: '700', color: '#64748b' }}>RUBRIQUE / NOM</th>
+                    <th style={{ padding: '12px 8px', fontSize: '11px', fontWeight: '700', color: '#64748b', width: '140px' }}>N° DE BC</th>
+                    <th style={{ padding: '12px 8px', fontSize: '11px', fontWeight: '700', color: '#64748b', width: '120px' }}>DATE D'ÉMISSION</th>
+                    <th style={{ padding: '12px 8px', fontSize: '11px', fontWeight: '700', color: '#64748b', width: '130px', textAlign: 'right' }}>MONTANT TTC</th>
+                    <th style={{ padding: '12px 8px', fontSize: '11px', fontWeight: '700', color: '#64748b', width: '110px', textAlign: 'center' }}>STATUT</th>
+                    <th style={{ padding: '12px 8px', fontSize: '11px', fontWeight: '700', color: '#64748b', width: '220px', textAlign: 'center' }}>ACTIONS</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {[
-                    { id: 1, label: 'Huile de table 5L', unit: 'Carton', qty: 40, price: 180 },
-                    { id: 2, label: 'Sucre en poudre 50kg', unit: 'Sac', qty: 20, price: 350 },
-                    { id: 3, label: 'Riz long grain 25kg', unit: 'Sac', qty: 30, price: 280 },
-                    { id: 4, label: 'Semoule fine 25kg', unit: 'Sac', qty: 25, price: 210 }
-                  ].map(item => (
-                    <tr key={item.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                      <td style={{ padding: '12px 8px', fontSize: '12px', color: '#64748b' }}>{item.id}</td>
-                      <td style={{ padding: '12px 8px', fontSize: '13px', fontWeight: '600', color: '#0f172a' }}>{item.label}</td>
-                      <td style={{ padding: '12px 8px', fontSize: '12px', color: '#475569' }}>{item.unit}</td>
-                      <td style={{ padding: '12px 8px', fontSize: '13px', color: '#0f172a', textAlign: 'center', fontWeight: '600' }}>{item.qty}</td>
-                      <td style={{ padding: '12px 8px', fontSize: '13px', color: '#475569', textAlign: 'right' }}>{item.price.toFixed(2)}</td>
-                      <td style={{ padding: '12px 8px', fontSize: '13px', fontWeight: '700', color: '#0f172a', textAlign: 'right' }}>{(item.qty * item.price).toLocaleString('fr-FR', { minimumFractionDigits: 2 })} MAD</td>
+                  {bcs.length === 0 ? (
+                    <tr>
+                      <td colSpan="7" style={{ padding: '24px', textAlign: 'center', color: '#64748b', fontSize: '14px' }}>
+                        Aucun bon de commande trouvé. Cliquez sur "Nouveau BC" pour en ajouter un.
+                      </td>
                     </tr>
-                  ))}
+                  ) : (
+                    bcs.map((bc, idx) => (
+                      <tr key={bc.id || idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                        <td style={{ padding: '14px 8px', fontSize: '12px', color: '#64748b' }}>{idx + 1}</td>
+                        <td style={{ padding: '14px 8px', fontSize: '13px', fontWeight: '600', color: '#0f172a' }}>
+                          <div>{bc.rubrique || 'N/A'}</div>
+                          <div style={{ fontSize: '10px', color: '#64748b', fontWeight: 'normal', marginTop: '2px' }}>{bc.budget || 'Budget de Fonctionnement'}</div>
+                        </td>
+                        <td style={{ padding: '14px 8px', fontSize: '12px', fontWeight: '700', color: '#0f766e' }}>
+                          <span style={{ backgroundColor: '#ecfdf5', color: '#0f766e', padding: '4px 8px', borderRadius: '6px', fontSize: '11px' }}>
+                            {bc.numeroBC}
+                          </span>
+                        </td>
+                        <td style={{ padding: '14px 8px', fontSize: '12px', color: '#475569' }}>
+                          {new Date(bc.dateEmission).toLocaleDateString('fr-FR')}
+                        </td>
+                        <td style={{ padding: '14px 8px', fontSize: '13px', fontWeight: '700', color: '#0f172a', textAlign: 'right' }}>
+                          {bc.montantTTC ? parseFloat(bc.montantTTC).toLocaleString('fr-FR', { minimumFractionDigits: 2 }) : '0.00'} MAD
+                        </td>
+                        <td style={{ padding: '14px 8px', textAlign: 'center' }}>
+                          <span style={{ 
+                            backgroundColor: bc.statut === 'Validé' || bc.statut === 'Livré' ? '#ecfdf5' : '#fef3c7', 
+                            color: bc.statut === 'Validé' || bc.statut === 'Livré' ? '#0f766e' : '#d97706', 
+                            padding: '3px 8px', borderRadius: '12px', fontSize: '10px', fontWeight: '700' 
+                          }}>
+                            {bc.statut || 'En cours'}
+                          </span>
+                        </td>
+                        <td style={{ padding: '14px 8px', display: 'flex', gap: '8px', justifyContent: 'center' }}>
+                          <button 
+                            onClick={() => setSelectedBcForView(bc)} 
+                            className="btn-secondary" 
+                            style={{ padding: '6px 12px', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px' }}
+                          >
+                            <Eye size={12} /> Voir
+                          </button>
+                          <button 
+                            onClick={() => {
+                              setEditingBc(bc);
+                              setNewBcData({
+                                numeroBC: bc.numeroBC,
+                                dateEmission: bc.dateEmission,
+                                budget: bc.budget || '',
+                                exercice: bc.exercice || '',
+                                rubrique: bc.rubrique || '',
+                                referenceMarcheCadre: bc.referenceMarcheCadre || '',
+                                lieuLivraison: bc.lieuLivraison || '',
+                                conditionsGenerales: bc.conditionsGenerales || '',
+                                conditionsParticulieres: bc.conditionsParticulieres || '',
+                                montantHT: bc.montantHT || '',
+                                montantTVA: bc.montantTVA || '',
+                                montantTTC: bc.montantTTC || '',
+                                statut: bc.statut || 'En cours',
+                                fournisseur_id: bc.fournisseur_id ? bc.fournisseur_id.toString() : ''
+                              });
+                              setShowBcModal(true);
+                            }} 
+                            className="btn-secondary" 
+                            style={{ padding: '6px 12px', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#3b82f6', borderColor: 'rgba(59,130,246,0.2)' }}
+                          >
+                            Modifier
+                          </button>
+                          <button 
+                            onClick={() => handleDeleteBc(bc.id)} 
+                            className="btn-secondary" 
+                            style={{ padding: '6px 12px', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#ef4444', borderColor: 'rgba(239,68,68,0.2)' }}
+                          >
+                            Supprimer
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
-
-              {/* Calculations */}
-              <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                <div style={{ width: '220px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#64748b' }}>
-                    <span>Sous-total:</span>
-                    <span style={{ fontWeight: '600', color: '#334155' }}>27 650,00 MAD</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#64748b' }}>
-                    <span>TVA (20%):</span>
-                    <span style={{ fontWeight: '600', color: '#334155' }}>5 530,00 MAD</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', fontWeight: '800', color: '#0f766e', borderTop: '1px solid #cbd5e1', paddingTop: '8px', marginTop: '4px' }}>
-                    <span>Total TTC:</span>
-                    <span>33 180,00 MAD</span>
-                  </div>
-                </div>
-              </div>
-
             </div>
           </div>
         </div>
@@ -731,6 +844,348 @@ const MarchesContent = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {/* Modal Add/Edit BC */}
+      {showBcModal && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, 
+          backgroundColor: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50
+        }}>
+          <div style={{ 
+            backgroundColor: 'white', borderRadius: '16px', width: '100%', maxWidth: '600px', 
+            padding: '32px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' 
+          }}>
+            <h2 style={{ margin: '0 0 24px 0', fontSize: '20px', fontWeight: '700', color: '#0f172a' }}>
+              {editingBc ? 'Modifier le Bon de commande' : 'Ajouter un Bon de commande'}
+            </h2>
+            
+            <form onSubmit={handleSaveBc} style={{ display: 'flex', flexDirection: 'column', gap: '24px', maxHeight: '75vh', overflowY: 'auto', paddingRight: '4px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#475569', marginBottom: '6px' }}>Numéro du BC *</label>
+                  <input 
+                    type="text" 
+                    value={newBcData.numeroBC} 
+                    onChange={(e) => setNewBcData({ ...newBcData, numeroBC: e.target.value })} 
+                    required
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '13px', color: '#334155' }}
+                    placeholder="Ex: BC-2024-089-001"
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#475569', marginBottom: '6px' }}>Date d'émission *</label>
+                  <input 
+                    type="date" 
+                    value={newBcData.dateEmission} 
+                    onChange={(e) => setNewBcData({ ...newBcData, dateEmission: e.target.value })} 
+                    required
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '13px', color: '#334155' }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '24px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#475569', marginBottom: '6px' }}>Rubrique / Nom *</label>
+                  <input 
+                    type="text" 
+                    value={newBcData.rubrique} 
+                    onChange={(e) => setNewBcData({ ...newBcData, rubrique: e.target.value })} 
+                    required
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '13px', color: '#334155' }}
+                    placeholder="Alimentation générale"
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#475569', marginBottom: '6px' }}>Exercice *</label>
+                  <input 
+                    type="number" 
+                    value={newBcData.exercice} 
+                    onChange={(e) => setNewBcData({ ...newBcData, exercice: e.target.value })} 
+                    required
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '13px', color: '#334155' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#475569', marginBottom: '6px' }}>Budget *</label>
+                  <select 
+                    value={newBcData.budget} 
+                    onChange={(e) => setNewBcData({ ...newBcData, budget: e.target.value })}
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '13px', color: '#334155', backgroundColor: 'white' }}
+                  >
+                    <option value="Budget de Fonctionnement">Fonctionnement</option>
+                    <option value="Budget d'Investissement">Investissement</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#475569', marginBottom: '6px' }}>Réf. Marché Cadre</label>
+                  <input 
+                    type="text" 
+                    value={newBcData.referenceMarcheCadre} 
+                    onChange={(e) => setNewBcData({ ...newBcData, referenceMarcheCadre: e.target.value })} 
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '13px', color: '#334155' }}
+                    placeholder="MC-2023-01"
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#475569', marginBottom: '6px' }}>Lieu de Livraison</label>
+                  <input 
+                    type="text" 
+                    value={newBcData.lieuLivraison} 
+                    onChange={(e) => setNewBcData({ ...newBcData, lieuLivraison: e.target.value })} 
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '13px', color: '#334155' }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#475569', marginBottom: '6px' }}>Fournisseur *</label>
+                  <select 
+                    value={newBcData.fournisseur_id} 
+                    onChange={(e) => setNewBcData({ ...newBcData, fournisseur_id: e.target.value })}
+                    required
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '13px', color: '#334155', backgroundColor: 'white' }}
+                  >
+                    <option value="">-- Choisir un fournisseur --</option>
+                    {fournisseurs.map(f => (
+                      <option key={f.id} value={f.id}>{f.raisonSociale}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#475569', marginBottom: '6px' }}>Statut *</label>
+                  <select 
+                    value={newBcData.statut} 
+                    onChange={(e) => setNewBcData({ ...newBcData, statut: e.target.value })}
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '13px', color: '#334155', backgroundColor: 'white' }}
+                  >
+                    <option value="En cours">En cours</option>
+                    <option value="Validé">Validé</option>
+                    <option value="Livré">Livré</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '24px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#475569', marginBottom: '6px' }}>Montant HT (MAD) *</label>
+                  <input 
+                    type="number" step="0.01"
+                    value={newBcData.montantHT} 
+                    onChange={(e) => {
+                      const ht = parseFloat(e.target.value) || 0;
+                      const tva = ht * 0.20;
+                      const ttc = ht + tva;
+                      setNewBcData({ 
+                        ...newBcData, 
+                        montantHT: e.target.value,
+                        montantTVA: tva.toFixed(2),
+                        montantTTC: ttc.toFixed(2)
+                      });
+                    }} 
+                    required
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '13px', color: '#334155' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#475569', marginBottom: '6px' }}>Montant TVA (20%)</label>
+                  <input 
+                    type="number" step="0.01" readOnly disabled
+                    value={newBcData.montantTVA} 
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '13px', color: '#94a3b8', backgroundColor: '#f8fafc' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#475569', marginBottom: '6px' }}>Montant TTC</label>
+                  <input 
+                    type="number" step="0.01" readOnly disabled
+                    value={newBcData.montantTTC} 
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '13px', color: '#0f766e', backgroundColor: '#f0fdf4', fontWeight: '700' }}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#475569', marginBottom: '6px' }}>Conditions Générales</label>
+                <textarea 
+                  value={newBcData.conditionsGenerales} 
+                  onChange={(e) => setNewBcData({ ...newBcData, conditionsGenerales: e.target.value })} 
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '13px', color: '#334155', minHeight: '60px' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#475569', marginBottom: '6px' }}>Conditions Particulières</label>
+                <textarea 
+                  value={newBcData.conditionsParticulieres} 
+                  onChange={(e) => setNewBcData({ ...newBcData, conditionsParticulieres: e.target.value })} 
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '13px', color: '#334155', minHeight: '60px' }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '16px', borderTop: '1px solid #cbd5e1', paddingTop: '16px' }}>
+                <button 
+                  type="button" 
+                  onClick={() => setShowBcModal(false)}
+                  className="btn-secondary"
+                  style={{ padding: '10px 20px' }}
+                >
+                  Annuler
+                </button>
+                <button 
+                  type="submit"
+                  className="btn-primary"
+                  style={{ padding: '10px 20px', backgroundColor: '#0f766e', border: 'none', borderRadius: '8px', color: 'white', fontWeight: '600' }}
+                >
+                  {editingBc ? 'Enregistrer' : 'Ajouter'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal View BC details */}
+      {selectedBcForView && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, 
+          backgroundColor: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50
+        }}>
+          <div style={{ 
+            backgroundColor: 'white', borderRadius: '16px', width: '100%', maxWidth: '700px', 
+            padding: '32px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)',
+            maxHeight: '90vh', overflowY: 'auto'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', borderBottom: '1px solid #e2e8f0', paddingBottom: '16px' }}>
+              <div>
+                <span style={{ backgroundColor: '#ecfdf5', color: '#0f766e', padding: '4px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: '700', marginRight: '8px' }}>
+                  {selectedBcForView.numeroBC}
+                </span>
+                <h2 style={{ margin: '6px 0 0 0', fontSize: '20px', fontWeight: '700', color: '#0f172a' }}>
+                  {selectedBcForView.rubrique || 'Bon de Commande'}
+                </h2>
+              </div>
+              <button 
+                onClick={() => setSelectedBcForView(null)}
+                style={{ background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer', color: '#64748b', lineHeight: 1 }}
+              >
+                &times;
+              </button>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '24px' }}>
+              <div>
+                <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '700', textTransform: 'uppercase', marginBottom: '4px' }}>Date d'émission</div>
+                <div style={{ fontSize: '14px', fontWeight: '600', color: '#334155' }}>
+                  {new Date(selectedBcForView.dateEmission).toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '700', textTransform: 'uppercase', marginBottom: '4px' }}>Fournisseur</div>
+                <div style={{ fontSize: '14px', fontWeight: '600', color: '#334155' }}>
+                  {selectedBcForView.fournisseur?.raisonSociale || fournisseurs.find(f => f.id === selectedBcForView.fournisseur_id)?.raisonSociale || 'Non spécifié'}
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px', marginBottom: '24px', backgroundColor: '#f8fafc', padding: '16px', borderRadius: '12px' }}>
+              <div>
+                <div style={{ fontSize: '10px', color: '#94a3b8', fontWeight: '700', textTransform: 'uppercase', marginBottom: '2px' }}>Exercice</div>
+                <div style={{ fontSize: '13px', fontWeight: '600', color: '#334155' }}>{selectedBcForView.exercice || '2024'}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: '10px', color: '#94a3b8', fontWeight: '700', textTransform: 'uppercase', marginBottom: '2px' }}>Réf. Marché Cadre</div>
+                <div style={{ fontSize: '13px', fontWeight: '600', color: '#334155' }}>{selectedBcForView.referenceMarcheCadre || 'Non spécifié'}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: '10px', color: '#94a3b8', fontWeight: '700', textTransform: 'uppercase', marginBottom: '2px' }}>Lieu de Livraison</div>
+                <div style={{ fontSize: '13px', fontWeight: '600', color: '#334155' }}>{selectedBcForView.lieuLivraison || 'Internat Casablanca'}</div>
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '24px' }}>
+              <div>
+                <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '700', textTransform: 'uppercase', marginBottom: '4px' }}>Conditions Générales</div>
+                <div style={{ fontSize: '13px', color: '#475569', backgroundColor: '#fafafa', padding: '12px', borderRadius: '8px', border: '1px solid #f1f5f9' }}>
+                  {selectedBcForView.conditionsGenerales || 'Aucune condition spécifique.'}
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '700', textTransform: 'uppercase', marginBottom: '4px' }}>Conditions Particulières</div>
+                <div style={{ fontSize: '13px', color: '#475569', backgroundColor: '#fafafa', padding: '12px', borderRadius: '8px', border: '1px solid #f1f5f9' }}>
+                  {selectedBcForView.conditionsParticulieres || 'Aucune condition particulière.'}
+                </div>
+              </div>
+            </div>
+
+            <h3 style={{ fontSize: '14px', fontWeight: '700', color: '#0f172a', marginBottom: '12px' }}>Liste des articles</h3>
+            <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '24px' }}>
+              <thead>
+                <tr style={{ borderBottom: '2px solid #cbd5e1', textAlign: 'left' }}>
+                  <th style={{ padding: '8px', fontSize: '11px', fontWeight: '700', color: '#64748b', width: '40px' }}>#</th>
+                  <th style={{ padding: '8px', fontSize: '11px', fontWeight: '700', color: '#64748b' }}>DÉSIGNATION</th>
+                  <th style={{ padding: '8px', fontSize: '11px', fontWeight: '700', color: '#64748b', width: '80px' }}>UNITÉ</th>
+                  <th style={{ padding: '8px', fontSize: '11px', fontWeight: '700', color: '#64748b', width: '70px', textAlign: 'center' }}>QTÉ</th>
+                  <th style={{ padding: '8px', fontSize: '11px', fontWeight: '700', color: '#64748b', width: '110px', textAlign: 'right' }}>PU (MAD)</th>
+                  <th style={{ padding: '8px', fontSize: '11px', fontWeight: '700', color: '#64748b', width: '120px', textAlign: 'right' }}>TOTAL</th>
+                </tr>
+              </thead>
+              <tbody>
+                {bcItems.map((item, idx) => (
+                  <tr key={item.id || idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                    <td style={{ padding: '10px 8px', fontSize: '12px', color: '#64748b' }}>{idx + 1}</td>
+                    <td style={{ padding: '10px 8px', fontSize: '13px', fontWeight: '600', color: '#0f172a' }}>{item.label}</td>
+                    <td style={{ padding: '10px 8px', fontSize: '12px', color: '#475569' }}>{item.unit}</td>
+                    <td style={{ padding: '10px 8px', fontSize: '13px', color: '#0f172a', textAlign: 'center', fontWeight: '600' }}>{item.qty}</td>
+                    <td style={{ padding: '10px 8px', fontSize: '13px', color: '#475569', textAlign: 'right' }}>{parseFloat(item.price).toFixed(2)}</td>
+                    <td style={{ padding: '10px 8px', fontSize: '13px', fontWeight: '700', color: '#0f172a', textAlign: 'right' }}>{(item.qty * item.price).toLocaleString('fr-FR', { minimumFractionDigits: 2 })} MAD</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            {/* Calculations */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid #cbd5e1', paddingTop: '16px' }}>
+              <div style={{ width: '260px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#64748b' }}>
+                  <span>Montant HT:</span>
+                  <span style={{ fontWeight: '600', color: '#334155' }}>
+                    {parseFloat(selectedBcForView.montantHT || 0).toLocaleString('fr-FR', { minimumFractionDigits: 2 })} MAD
+                  </span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#64748b' }}>
+                  <span>Montant TVA (20%):</span>
+                  <span style={{ fontWeight: '600', color: '#334155' }}>
+                    {parseFloat(selectedBcForView.montantTVA || 0).toLocaleString('fr-FR', { minimumFractionDigits: 2 })} MAD
+                  </span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', fontWeight: '800', color: '#0f766e', borderTop: '1px double #cbd5e1', paddingTop: '8px', marginTop: '4px' }}>
+                  <span>Montant TTC:</span>
+                  <span>
+                    {parseFloat(selectedBcForView.montantTTC || 0).toLocaleString('fr-FR', { minimumFractionDigits: 2 })} MAD
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '24px', borderTop: '1px solid #e2e8f0', paddingTop: '16px' }}>
+              <button 
+                type="button" 
+                onClick={() => setSelectedBcForView(null)}
+                className="btn-primary"
+                style={{ padding: '10px 20px', backgroundColor: '#0f766e', border: 'none', borderRadius: '8px', color: 'white', fontWeight: '600' }}
+              >
+                Fermer
+              </button>
+            </div>
           </div>
         </div>
       )}

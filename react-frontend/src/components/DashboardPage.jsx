@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   LayoutDashboard, FileText, Package, Users, BarChart3, CalendarDays, Settings, LogOut,
   Search, Bell, FileSpreadsheet, AlertTriangle, ArrowRight, ChevronRight, Clock, AlertCircle, TrendingUp
@@ -7,10 +7,35 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import MarchesContent from './MarchesContent';
 import FournisseursContent from './FournisseursContent';
 import MenusContent from './MenusContent';
+import ParametresContent from './ParametresContent';
 
 const DashboardPage = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
-  const user = JSON.parse(localStorage.getItem('user') || sessionStorage.getItem('user') || '{}');
+  
+  const [currentUser, setCurrentUser] = useState(() => {
+    return JSON.parse(localStorage.getItem('user') || sessionStorage.getItem('user') || '{}');
+  });
+
+  useEffect(() => {
+    const handleProfileUpdate = () => {
+      const updatedUser = JSON.parse(localStorage.getItem('user') || sessionStorage.getItem('user') || '{}');
+      setCurrentUser(updatedUser);
+    };
+
+    window.addEventListener('user-profile-updated', handleProfileUpdate);
+    return () => {
+      window.removeEventListener('user-profile-updated', handleProfileUpdate);
+    };
+  }, []);
+
+  const getInitials = (name) => {
+    if (!name) return 'KA';
+    const parts = name.trim().split(' ');
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
+    return name.slice(0, 2).toUpperCase();
+  };
 
   const handleLogout = () => {
     localStorage.removeItem('auth_token');
@@ -173,15 +198,19 @@ const DashboardPage = () => {
                 borderRadius: '8px', display: 'flex', alignItems: 'center',
                 justifyContent: 'center', fontWeight: 'bold', fontSize: '14px', position: 'relative'
               }}>
-                KA
+                {getInitials(currentUser.name)}
                 <div style={{
                   position: 'absolute', bottom: '-2px', right: '-2px', width: '10px', height: '10px',
                   backgroundColor: '#10b981', border: '2px solid #1e293b', borderRadius: '50%'
                 }}></div>
               </div>
               <div>
-                <div style={{ fontSize: '13px', fontWeight: '600', color: 'white' }}>Karim Alaoui</div>
-                <div style={{ fontSize: '11px', color: '#94a3b8' }}>Gestionnaire de stock</div>
+                <div style={{ fontSize: '13px', fontWeight: '600', color: 'white', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '140px' }}>
+                  {currentUser.name || 'Utilisateur'}
+                </div>
+                <div style={{ fontSize: '11px', color: '#94a3b8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '140px' }}>
+                  {currentUser.email || 'Gestionnaire'}
+                </div>
               </div>
             </div>
 
@@ -215,6 +244,7 @@ const DashboardPage = () => {
               {activeTab === 'marches' && 'Marchés'}
               {activeTab === 'fournisseurs' && 'Fournisseurs'}
               {activeTab === 'menus' && 'Menus journaliers'}
+              {activeTab === 'parametres' && 'Paramètres'}
             </span>
           </div>
 
@@ -236,11 +266,11 @@ const DashboardPage = () => {
                 <Bell size={20} />
                 <span style={{ position: 'absolute', top: '-2px', right: '-2px', width: '8px', height: '8px', backgroundColor: '#ef4444', borderRadius: '50%' }}></span>
               </button>
-              <button style={{ background: 'none', border: 'none', cursor: 'pointer' }}><Settings size={20} /></button>
+              <button onClick={() => setActiveTab('parametres')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}><Settings size={20} /></button>
             </div>
             {/* User Avatar Small */}
             <div style={{ width: '32px', height: '32px', backgroundColor: '#0f766e', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '12px', fontWeight: 'bold' }}>
-              KA
+              {getInitials(currentUser.name)}
             </div>
           </div>
         </header>
@@ -258,7 +288,7 @@ const DashboardPage = () => {
                 boxShadow: '0 10px 15px -3px rgba(16, 185, 129, 0.2)', marginBottom: '24px'
               }}>
                 <div>
-                  <h1 style={{ fontSize: '24px', fontWeight: '700', margin: '0 0 8px 0' }}>Bonjour, Karim</h1>
+                  <h1 style={{ fontSize: '24px', fontWeight: '700', margin: '0 0 8px 0' }}>Bonjour, {currentUser.name?.split(' ')[0] || 'Utilisateur'}</h1>
                   <p style={{ margin: 0, fontSize: '14px', opacity: 0.9 }}>Mardi 16 Janvier 2024 - Internat OFPPT Casablanca - Tout est sous contrôle.</p>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
@@ -438,6 +468,7 @@ const DashboardPage = () => {
           {activeTab === 'marches' && <MarchesContent />}
           {activeTab === 'fournisseurs' && <FournisseursContent />}
           {activeTab === 'menus' && <MenusContent />}
+          {activeTab === 'parametres' && <ParametresContent />}
         </div>
       </main>
     </div>
