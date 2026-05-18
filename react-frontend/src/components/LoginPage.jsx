@@ -6,20 +6,27 @@ import cardBg from '../assets/login_bg.png';
 
 /* ─────────────── Input style (light, like the image) ─────────────── */
 const inputStyle = (focused) => ({
-    width: '100%', boxSizing: 'border-box',
-    background: 'rgba(0, 0, 0, 0.25)',
-    border: `1px solid ${focused ? '#14b8a6' : 'rgba(255, 255, 255, 0.1)'}`,
-    borderRadius: '12px',
-    padding: '13px 14px 13px 44px',
-    color: '#ffffff', fontSize: '14px', outline: 'none',
-    transition: 'all 0.3s ease',
+    width: '100%',
+    boxSizing: 'border-box',
+    background: 'rgba(255, 255, 255, 0.12)',
+    border: `1.5px solid ${focused ? '#10b981' : 'rgba(255, 255, 255, 0.35)'}`,
+    borderRadius: '10px',
+    padding: '12px 14px 12px 42px',
+    color: '#ffffff',
+    fontSize: '14px',
+    outline: 'none',
+    transition: 'all 0.25s ease',
+    backdropFilter: 'blur(4px)',
 });
 
 const labelStyle = {
     display: 'block',
-    color: 'rgba(20, 184, 166, 0.8)',
-    fontSize: '11px', fontWeight: '700',
-    letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '8px',
+    color: 'rgba(255, 255, 255, 0.75)',
+    fontSize: '11px',
+    fontWeight: '700',
+    letterSpacing: '0.13em',
+    textTransform: 'uppercase',
+    marginBottom: '7px',
 };
 
 /* ─────────────── Forgot Password Modal ─────────────── */
@@ -53,12 +60,12 @@ const ForgotModal = ({ onClose }) => {
             padding: '24px', backdropFilter: 'blur(10px)',
         }}>
             <div style={{
-                backgroundImage: `linear-gradient(rgba(13, 23, 39, 0.98), rgba(13, 23, 39, 0.98))`,
-                border: '1px solid rgba(14, 140, 116, 0.25)',
-                borderRadius: '24px', padding: '36px 32px',
+                background: 'rgba(15, 25, 40, 0.97)',
+                border: '1px solid rgba(16, 185, 129, 0.3)',
+                borderRadius: '20px', padding: '36px 32px',
                 width: '100%', maxWidth: '420px',
                 boxSizing: 'border-box', position: 'relative',
-                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.6), 0 0 40px rgba(14, 140, 116, 0.05)',
+                boxShadow: '0 30px 60px rgba(0,0,0,0.5)',
                 color: '#ffffff',
             }}>
                 <button onClick={onClose} style={{
@@ -66,7 +73,7 @@ const ForgotModal = ({ onClose }) => {
                     background: 'rgba(255,255,255,0.05)',
                     border: '1px solid rgba(255,255,255,0.1)',
                     borderRadius: '8px', padding: '6px', cursor: 'pointer',
-                    color: 'rgba(255,255,255,0.4)', display: 'flex', alignItems: 'center',
+                    color: 'rgba(255,255,255,0.5)', display: 'flex', alignItems: 'center',
                     transition: 'all 0.2s',
                 }}>
                     <X style={{ width: '16px', height: '16px' }} />
@@ -76,11 +83,11 @@ const ForgotModal = ({ onClose }) => {
                     <div style={{ textAlign: 'center', padding: '16px 0' }}>
                         <div style={{
                             width: '64px', height: '64px', margin: '0 auto 20px',
-                            background: 'rgba(14,140,116,0.15)',
-                            border: '2px solid #0e8c74', borderRadius: '50%',
+                            background: 'rgba(16,185,129,0.15)',
+                            border: '2px solid #10b981', borderRadius: '50%',
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
                         }}>
-                            <Mail style={{ width: '28px', height: '28px', color: '#0e8c74' }} />
+                            <Mail style={{ width: '28px', height: '28px', color: '#10b981' }} />
                         </div>
                         <h3 style={{ color: '#ffffff', fontSize: '20px', fontWeight: '700', margin: '0 0 10px' }}>
                             Email envoyé !
@@ -88,18 +95,18 @@ const ForgotModal = ({ onClose }) => {
                         <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '14px', lineHeight: '1.6', margin: '0 0 8px' }}>
                             Un lien de réinitialisation a été envoyé à
                         </p>
-                        <p style={{ color: '#0e8c74', fontWeight: '600', fontSize: '14px', margin: '0 0 24px' }}>
+                        <p style={{ color: '#10b981', fontWeight: '600', fontSize: '14px', margin: '0 0 24px' }}>
                             {email}
                         </p>
                         <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: '12px', margin: '0 0 28px', lineHeight: '1.6' }}>
                             Vérifiez votre boîte de réception. Le lien expire dans <strong style={{ color: 'rgba(255,255,255,0.7)' }}>60 minutes</strong>.
                         </p>
                         <button onClick={onClose} style={{
-                            background: 'linear-gradient(90deg, #0d1727, #0e8c74)',
-                            border: 'none', borderRadius: '12px',
+                            background: 'linear-gradient(90deg, #059669, #10b981)',
+                            border: 'none', borderRadius: '10px',
                             padding: '12px 32px', color: 'white',
                             fontWeight: '700', fontSize: '14px', cursor: 'pointer',
-                            boxShadow: '0 4px 15px rgba(14, 140, 116, 0.3)',
+                            boxShadow: '0 4px 15px rgba(16,185,129,0.35)',
                         }}>
                             Retour à la connexion
                         </button>
@@ -109,11 +116,11 @@ const ForgotModal = ({ onClose }) => {
                         <div style={{ marginBottom: '28px' }}>
                             <div style={{
                                 width: '48px', height: '48px', marginBottom: '16px',
-                                background: 'rgba(14,140,116,0.1)',
-                                border: '1px solid rgba(14,140,116,0.3)', borderRadius: '14px',
+                                background: 'rgba(16,185,129,0.1)',
+                                border: '1px solid rgba(16,185,129,0.3)', borderRadius: '14px',
                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                             }}>
-                                <Mail style={{ width: '22px', height: '22px', color: '#0e8c74' }} />
+                                <Mail style={{ width: '22px', height: '22px', color: '#10b981' }} />
                             </div>
                             <h3 style={{ color: '#ffffff', fontSize: '20px', fontWeight: '700', margin: '0 0 8px' }}>
                                 Mot de passe oublié ?
@@ -127,7 +134,7 @@ const ForgotModal = ({ onClose }) => {
                             <div style={{
                                 background: 'rgba(239,68,68,0.15)',
                                 border: '1px solid rgba(239,68,68,0.4)',
-                                borderRadius: '8px', padding: '10px 14px',
+                                borderRadius: '10px', padding: '10px 14px',
                                 color: '#fca5a5', fontSize: '13px', marginBottom: '18px',
                             }}>
                                 {error}
@@ -136,12 +143,12 @@ const ForgotModal = ({ onClose }) => {
 
                         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                             <div>
-                                <label style={labelStyle}>ADRESSE EMAIL</label>
+                                <label style={labelStyle}>Adresse Email</label>
                                 <div style={{ position: 'relative' }}>
                                     <Mail style={{
-                                        position: 'absolute', left: '14px', top: '50%',
-                                        transform: 'translateY(-50%)', width: '18px', height: '18px',
-                                        color: focused ? '#0e8c74' : 'rgba(255,255,255,0.3)',
+                                        position: 'absolute', left: '13px', top: '50%',
+                                        transform: 'translateY(-50%)', width: '17px', height: '17px',
+                                        color: focused ? '#10b981' : 'rgba(255,255,255,0.4)',
                                         transition: 'color 0.2s',
                                     }} />
                                     <input
@@ -156,19 +163,19 @@ const ForgotModal = ({ onClose }) => {
                             </div>
 
                             <button type="submit" disabled={loading} style={{
-                                background: 'linear-gradient(90deg, #0d1727, #0e8c74)',
-                                border: 'none', borderRadius: '12px',
+                                background: 'linear-gradient(90deg, #059669, #10b981)',
+                                border: 'none', borderRadius: '10px',
                                 padding: '13px', color: 'white',
-                                fontWeight: '600', fontSize: '14px',
+                                fontWeight: '700', fontSize: '14px',
                                 cursor: loading ? 'not-allowed' : 'pointer',
                                 display: 'flex', alignItems: 'center',
                                 justifyContent: 'center', gap: '8px',
                                 opacity: loading ? 0.75 : 1,
-                                boxShadow: '0 4px 15px rgba(14, 140, 116, 0.3)',
+                                boxShadow: '0 4px 15px rgba(16,185,129,0.3)',
                             }}>
                                 {loading
                                     ? <Loader2 style={{ width: '18px', height: '18px', animation: 'spin 1s linear infinite' }} />
-                                    : 'Envoyer le lien'
+                                    : 'Envoyer le lien de réinitialisation'
                                 }
                             </button>
 
@@ -179,8 +186,8 @@ const ForgotModal = ({ onClose }) => {
                                 alignItems: 'center', justifyContent: 'center', gap: '6px',
                                 transition: 'color 0.2s',
                             }}
-                                onMouseEnter={(e) => e.target.style.color = '#0e8c74'}
-                                onMouseLeave={(e) => e.target.style.color = 'rgba(255,255,255,0.4)'}>
+                                onMouseEnter={(e) => e.currentTarget.style.color = '#10b981'}
+                                onMouseLeave={(e) => e.currentTarget.style.color = 'rgba(255,255,255,0.45)'}>
                                 <ArrowLeft style={{ width: '14px', height: '14px' }} />
                                 Retour à la connexion
                             </button>
@@ -237,16 +244,26 @@ const LoginPage = () => {
 
             {/* ── Full-screen warehouse background ── */}
             <div style={{
-                minHeight: '100vh', width: '100%',
-                backgroundImage: `linear-gradient(135deg, rgba(13, 27, 42, 0.98) 0%, rgba(26, 54, 93, 0.95) 100%), url(${cardBg})`,
+                minHeight: '100vh',
+                width: '100%',
+                position: 'relative',
+                backgroundImage: `url(${cardBg})`,
                 backgroundSize: 'cover',
                 backgroundPosition: 'center',
                 backgroundRepeat: 'no-repeat',
                 display: 'flex',
                 alignItems: 'center',
                 fontFamily: "'Inter', 'Segoe UI', sans-serif",
-                padding: '24px', boxSizing: 'border-box',
+                overflow: 'hidden',
             }}>
+                {/* Overlay — lighter so warehouse photo is visible */}
+                <div style={{
+                    position: 'absolute', inset: 0,
+                    background: 'linear-gradient(100deg, rgba(5,15,28,0.70) 0%, rgba(5,15,28,0.50) 50%, rgba(5,15,28,0.18) 100%)',
+                    zIndex: 1,
+                }} />
+
+                {/* Content wrapper */}
                 <div style={{
                     position: 'relative', zIndex: 2,
                     width: '100%', maxWidth: '1200px',
@@ -254,7 +271,10 @@ const LoginPage = () => {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
-                    gap: '48px', flexWrap: 'wrap',
+                    gap: '40px',
+                    padding: '40px 48px',
+                    boxSizing: 'border-box',
+                    flexWrap: 'wrap',
                 }}>
 
                     {/* ── LEFT: Branding & Features ── */}
@@ -263,42 +283,76 @@ const LoginPage = () => {
                         {/* Logo row */}
                         <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '44px' }}>
                             <div style={{
-                                width: '52px', height: '52px',
-                                background: 'linear-gradient(135deg, #0e8c74, #0f766e)',
-                                borderRadius: '14px',
-                                display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-                                boxShadow: '0 4px 12px rgba(14, 140, 116, 0.3)',
+                                width: '60px', height: '60px',
+                                background: '#ffffff',
+                                borderRadius: '50%',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                flexShrink: 0,
+                                boxShadow: '0 0 0 3px rgba(16,185,129,0.35), 0 4px 16px rgba(0,0,0,0.3)',
+                                overflow: 'hidden',
+                                padding: '6px',
                             }}>
-                                <img src={logo} alt="Logo" style={{ width: '28px', height: '28px', objectFit: 'contain', filter: 'brightness(0) invert(1)' }} />
+                                <img
+                                    src={logo}
+                                    alt="Logo"
+                                    style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                                />
                             </div>
                             <div>
-                                <div style={{ fontSize: '22px', fontWeight: '700', lineHeight: '1.1', color: '#ffffff' }}>InterNat Stock</div>
-                                <div style={{ fontSize: '11px', color: '#0e8c74', fontWeight: '600', letterSpacing: '0.15em', textTransform: 'uppercase' }}>OFPPT · SYSTÈME DE GESTION</div>
+                                <div style={{ fontSize: '20px', fontWeight: '700', color: '#ffffff', lineHeight: 1.1 }}>
+                                    InterNat Stock
+                                </div>
+                                <div style={{
+                                    fontSize: '10px', color: '#10b981', fontWeight: '700',
+                                    letterSpacing: '0.18em', textTransform: 'uppercase', marginTop: '2px',
+                                }}>
+                                    OFPPT · SYSTÈME DE GESTION
+                                </div>
                             </div>
                         </div>
 
-                        <h1 style={{ fontSize: 'clamp(32px, 5vw, 52px)', fontWeight: '800', lineHeight: '1.15', margin: '0 0 20px 0', color: '#ffffff' }}>
+                        {/* Main heading */}
+                        <h1 style={{
+                            fontSize: 'clamp(28px, 4.5vw, 50px)',
+                            fontWeight: '800',
+                            lineHeight: '1.18',
+                            margin: '0 0 18px 0',
+                            color: '#ffffff',
+                        }}>
                             La gestion de stock<br />
-                            <span style={{ color: '#0e8c74' }}>réinventée</span> pour les internats
+                            <span style={{ color: '#10b981' }}>réinventée</span> pour les internats
                         </h1>
 
-                        <p style={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '15px', lineHeight: '1.7', margin: '0 0 40px 0', maxWidth: '460px' }}>
-                            Pilotez vos marchés, stocks, fournisseurs et menus journaliers depuis une interface moderne, intuitive et centralisée.
+                        {/* Subtitle */}
+                        <p style={{
+                            color: 'rgba(255,255,255,0.72)',
+                            fontSize: '14.5px',
+                            lineHeight: '1.7',
+                            margin: '0 0 38px 0',
+                            maxWidth: '440px',
+                        }}>
+                            Pilotez vos marchés, stocks, fournisseurs et menus journaliers depuis
+                            une interface moderne, intuitive et centralisée.
                         </p>
 
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                        {/* Feature list */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                             {features.map((f, i) => (
                                 <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
                                     <div style={{
-                                        width: '36px', height: '36px', flexShrink: 0,
-                                        background: 'rgba(14, 140, 116, 0.15)',
-                                        border: '1px solid rgba(14, 140, 116, 0.3)',
-                                        borderRadius: '10px',
+                                        width: '34px', height: '34px', flexShrink: 0,
+                                        background: 'rgba(16,185,129,0.18)',
+                                        border: '1px solid rgba(16,185,129,0.35)',
+                                        borderRadius: '8px',
                                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                                     }}>
-                                        {React.cloneElement(f.icon, { style: { ...f.icon.props.style, color: '#0e8c74' } })}
+                                        {React.cloneElement(f.icon, {
+                                            style: { width: '15px', height: '15px', color: '#10b981' }
+                                        })}
                                     </div>
-                                    <span style={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: '14px', fontWeight: '500' }}>{f.text}</span>
+                                    <span style={{ color: 'rgba(255,255,255,0.85)', fontSize: '13.5px', fontWeight: '500' }}>
+                                        {f.text}
+                                    </span>
                                 </div>
                             ))}
                         </div>
@@ -306,30 +360,37 @@ const LoginPage = () => {
 
                     {/* ── RIGHT: Login Card (glassmorphism) ── */}
                     <div style={{
-                        width: '100%', maxWidth: '400px',
-                        background: 'rgba(13, 23, 39, 0.7)',
-                        border: '1px solid rgba(14, 140, 116, 0.2)',
-                        borderRadius: '24px', padding: '40px 36px',
-                        boxSizing: 'border-box',
-                        backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
+                        width: '100%',
+                        maxWidth: '390px',
                         flexShrink: 0,
-                        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.6), 0 0 40px rgba(14, 140, 116, 0.05)',
+                        background: 'rgba(10, 20, 35, 0.72)',
+                        border: '1px solid rgba(255,255,255,0.12)',
+                        borderRadius: '18px',
+                        padding: '36px 32px',
+                        boxSizing: 'border-box',
+                        backdropFilter: 'blur(22px)',
+                        WebkitBackdropFilter: 'blur(22px)',
+                        boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
+                        color: '#ffffff',
                     }}>
-                        <div style={{ marginBottom: '32px' }}>
-                            <h2 style={{ color: '#ffffff', fontSize: '26px', fontWeight: '700', margin: '0 0 8px 0' }}>
+                        {/* Card header */}
+                        <div style={{ marginBottom: '28px' }}>
+                            <h2 style={{ color: '#ffffff', fontSize: '24px', fontWeight: '700', margin: '0 0 6px 0' }}>
                                 Bienvenue
                             </h2>
-                            <p style={{ color: 'rgba(255, 255, 255, 0.5)', fontSize: '13px', margin: 0 }}>
+                            <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '13px', margin: 0 }}>
                                 Connectez-vous à votre espace de gestion
                             </p>
                         </div>
 
-                        <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                        <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+
+                            {/* Error banner */}
                             {error && (
                                 <div style={{
-                                    background: 'rgba(239,68,68,0.15)',
-                                    border: '1px solid rgba(239,68,68,0.4)',
-                                    borderRadius: '10px', padding: '10px 14px',
+                                    background: 'rgba(239,68,68,0.18)',
+                                    border: '1px solid rgba(239,68,68,0.45)',
+                                    borderRadius: '9px', padding: '10px 14px',
                                     color: '#fca5a5', fontSize: '13px',
                                 }}>
                                     {error}
@@ -338,17 +399,22 @@ const LoginPage = () => {
 
                             {/* Email field */}
                             <div>
-                                <label style={labelStyle}>ADRESSE EMAIL</label>
+                                <label style={labelStyle}>Adresse Email</label>
                                 <div style={{ position: 'relative' }}>
                                     <Mail style={{
-                                        position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)',
-                                        width: '18px', height: '18px',
-                                        color: focused === 'email' ? '#0e8c74' : 'rgba(255,255,255,0.35)',
-                                        transition: 'color 0.2s'
+                                        position: 'absolute', left: '13px', top: '50%',
+                                        transform: 'translateY(-50%)',
+                                        width: '17px', height: '17px',
+                                        color: focused === 'email' ? '#10b981' : 'rgba(255,255,255,0.45)',
+                                        transition: 'color 0.2s',
+                                        pointerEvents: 'none',
                                     }} />
                                     <input
-                                        type="email" value={email} onChange={e => setEmail(e.target.value)}
-                                        placeholder="admin@ofppt.ma" required
+                                        type="email"
+                                        value={email}
+                                        onChange={e => setEmail(e.target.value)}
+                                        placeholder="adlrrin@ofppt.ma"
+                                        required
                                         style={inputStyle(focused === 'email')}
                                         onFocus={() => setFocused('email')}
                                         onBlur={() => setFocused('')}
@@ -358,13 +424,15 @@ const LoginPage = () => {
 
                             {/* Password field */}
                             <div>
-                                <label style={labelStyle}>MOT DE PASSE</label>
+                                <label style={labelStyle}>Mot de passe</label>
                                 <div style={{ position: 'relative' }}>
                                     <Lock style={{
-                                        position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)',
-                                        width: '18px', height: '18px',
-                                        color: focused === 'pwd' ? '#0e8c74' : 'rgba(255,255,255,0.35)',
-                                        transition: 'color 0.2s'
+                                        position: 'absolute', left: '13px', top: '50%',
+                                        transform: 'translateY(-50%)',
+                                        width: '17px', height: '17px',
+                                        color: focused === 'pwd' ? '#10b981' : 'rgba(255,255,255,0.45)',
+                                        transition: 'color 0.2s',
+                                        pointerEvents: 'none',
                                     }} />
                                     <input
                                         type={showPassword ? 'text' : 'password'}
@@ -383,11 +451,11 @@ const LoginPage = () => {
                                             position: 'absolute', right: '13px', top: '50%',
                                             transform: 'translateY(-50%)',
                                             background: 'none', border: 'none', cursor: 'pointer',
-                                            color: 'rgba(255,255,255,0.35)', padding: 0, display: 'flex',
-                                            transition: 'color 0.2s',
+                                            color: 'rgba(255,255,255,0.45)', padding: 0,
+                                            display: 'flex', transition: 'color 0.2s',
                                         }}
-                                        onMouseEnter={(e) => e.target.style.color = '#0e8c74'}
-                                        onMouseLeave={(e) => e.target.style.color = 'rgba(255,255,255,0.35)'}
+                                        onMouseEnter={(e) => e.currentTarget.style.color = '#10b981'}
+                                        onMouseLeave={(e) => e.currentTarget.style.color = 'rgba(255,255,255,0.45)'}
                                     >
                                         {showPassword
                                             ? <EyeOff style={{ width: '17px', height: '17px' }} />
@@ -397,20 +465,27 @@ const LoginPage = () => {
                                 </div>
                             </div>
 
-                            {/* Remember Me + Forgot */}
-                            <div style={{ display: 'flex', alignItems: 'center', justifycontent: 'space-between', fontSize: '13px' }}>
-                                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', color: 'rgba(255, 255, 255, 0.7)', userSelect: 'none' }}>
-                                    <div onClick={() => setRememberMe(!rememberMe)} style={{
-                                        width: '16px', height: '16px', flexShrink: 0,
-                                        borderRadius: '4px',
-                                        border: `2px solid ${rememberMe ? '#0e8c74' : 'rgba(255,255,255,0.2)'}`,
-                                        background: rememberMe ? '#0e8c74' : 'transparent',
-                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                        cursor: 'pointer', transition: 'all 0.2s',
-                                    }}>
+                            {/* Remember me + Forgot — same line like image */}
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '13px' }}>
+                                <label style={{
+                                    display: 'flex', alignItems: 'center', gap: '8px',
+                                    cursor: 'pointer', color: 'rgba(255,255,255,0.75)',
+                                    userSelect: 'none',
+                                }}>
+                                    <div
+                                        onClick={() => setRememberMe(!rememberMe)}
+                                        style={{
+                                            width: '16px', height: '16px', flexShrink: 0,
+                                            borderRadius: '4px',
+                                            border: `2px solid ${rememberMe ? '#10b981' : 'rgba(255,255,255,0.3)'}`,
+                                            background: rememberMe ? '#10b981' : 'transparent',
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                            cursor: 'pointer', transition: 'all 0.2s',
+                                        }}
+                                    >
                                         {rememberMe && (
                                             <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
-                                                <path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                                <path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
                                             </svg>
                                         )}
                                     </div>
@@ -422,35 +497,38 @@ const LoginPage = () => {
                                     onClick={() => setShowForgot(true)}
                                     style={{
                                         background: 'none', border: 'none',
-                                        color: '#0e8c74', cursor: 'pointer',
-                                        fontWeight: '500', fontSize: '13px', padding: 0,
-                                        transition: 'color 0.2s',
+                                        color: '#10b981', cursor: 'pointer',
+                                        fontWeight: '600', fontSize: '13px', padding: 0,
+                                        transition: 'opacity 0.2s',
                                     }}
-                                    onMouseEnter={(e) => e.target.style.color = '#0f766e'}
-                                    onMouseLeave={(e) => e.target.style.color = '#0e8c74'}
+                                    onMouseEnter={(e) => e.currentTarget.style.opacity = '0.75'}
+                                    onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
                                 >
-                                    Mot de passe oublie ?
+                                    Mot de passe oublié ?
                                 </button>
                             </div>
 
-                            {/* Submit */}
-                            <button type="submit" disabled={loading} style={{
-                                background: 'linear-gradient(90deg, #0d1727, #0e8c74)',
-                                border: 'none', borderRadius: '12px',
-                                padding: '14px', color: 'white',
-                                fontSize: '15px', fontWeight: '700',
-                                cursor: loading ? 'not-allowed' : 'pointer',
-                                display: 'flex', alignItems: 'center',
-                                justifyContent: 'center', gap: '10px',
-                                opacity: loading ? 0.8 : 1, transition: 'all 0.3s ease',
-                                boxShadow: '0 4px 20px rgba(14, 140, 116, 0.4)',
-                            }}
-                                onMouseEnter={(e) => {
-                                    if (!loading) e.target.style.boxShadow = '0 6px 24px rgba(14, 140, 116, 0.55)';
+                            {/* Submit button — green, full width */}
+                            <button
+                                type="submit"
+                                disabled={loading}
+                                style={{
+                                    background: 'linear-gradient(90deg, #059669 0%, #10b981 100%)',
+                                    border: 'none', borderRadius: '10px',
+                                    padding: '13px', color: 'white',
+                                    fontSize: '15px', fontWeight: '700',
+                                    cursor: loading ? 'not-allowed' : 'pointer',
+                                    display: 'flex', alignItems: 'center',
+                                    justifyContent: 'center', gap: '9px',
+                                    opacity: loading ? 0.8 : 1,
+                                    transition: 'all 0.25s ease',
+                                    boxShadow: '0 4px 20px rgba(16,185,129,0.4)',
+                                    width: '100%',
+                                    marginTop: '4px',
                                 }}
-                                onMouseLeave={(e) => {
-                                    e.target.style.boxShadow = '0 4px 20px rgba(14, 140, 116, 0.4)';
-                                }}>
+                                onMouseEnter={(e) => { if (!loading) e.currentTarget.style.boxShadow = '0 6px 28px rgba(16,185,129,0.55)'; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.boxShadow = '0 4px 20px rgba(16,185,129,0.4)'; }}
+                            >
                                 {loading
                                     ? <Loader2 style={{ width: '20px', height: '20px', animation: 'spin 1s linear infinite' }} />
                                     : <><LogIn style={{ width: '18px', height: '18px' }} /> Se connecter</>
@@ -464,7 +542,13 @@ const LoginPage = () => {
             <style>{`
                 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
                 @keyframes spin { to { transform: rotate(360deg); } }
-                input::placeholder { color: rgba(255,255,255,0.25); }
+                * { margin: 0; padding: 0; box-sizing: border-box; }
+                body { margin: 0; }
+                input::placeholder { color: rgba(255,255,255,0.35) !important; }
+                input:-webkit-autofill {
+                    -webkit-box-shadow: 0 0 0 1000px rgba(10,20,35,0.9) inset !important;
+                    -webkit-text-fill-color: #ffffff !important;
+                }
             `}</style>
         </>
     );

@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import {
   LayoutDashboard, FileText, Package, Users, BarChart3, CalendarDays, Settings, LogOut,
-  FileSpreadsheet, AlertTriangle, ArrowRight, ChevronRight, Clock, AlertCircle, TrendingUp
+  FileSpreadsheet, AlertTriangle, ArrowRight, ChevronRight, Clock, AlertCircle, TrendingUp, Search, Bell
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import MarchesContent from './MarchesContent';
 import FournisseursContent from './FournisseursContent';
 import MenusContent from './MenusContent';
+import ParametresContent from './ParametresContent';
 
 const DashboardPage = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -110,7 +111,6 @@ const DashboardPage = () => {
   );
 
   return (
-    <DashboardProvider onNavigate={(tab) => setActiveTab(tab)}>
     <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: '#f8fafc', fontFamily: "'Inter', sans-serif" }}>
       <style>{`
         .stat-card {
@@ -362,7 +362,7 @@ const DashboardPage = () => {
                     </h3>
                   </div>
                   <div style={{ height: '180px', width: '100%', position: 'relative' }}>
-                    <ResponsiveContainer width="100%" height="100%">
+                    <ResponsiveContainer  width={500} height={300}>
                       <PieChart>
                         <Pie data={pieData} cx="50%" cy="50%" innerRadius={50} outerRadius={70} paddingAngle={2} dataKey="value" stroke="none">
                           {pieData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}
@@ -470,7 +470,6 @@ const DashboardPage = () => {
         </div>
       </main>
     </div>
-    </DashboardProvider>
   );
 };
 
