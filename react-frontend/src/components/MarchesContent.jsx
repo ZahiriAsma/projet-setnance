@@ -226,7 +226,7 @@ const MarchesContent = () => {
                     <th style={{ padding: '12px 8px', fontSize: '11px', fontWeight: '700', color: '#64748b', width: '120px' }}>DATE D'ÉMISSION</th>
                     <th style={{ padding: '12px 8px', fontSize: '11px', fontWeight: '700', color: '#64748b', width: '130px', textAlign: 'right' }}>MONTANT TTC</th>
                     <th style={{ padding: '12px 8px', fontSize: '11px', fontWeight: '700', color: '#64748b', width: '110px', textAlign: 'center' }}>STATUT</th>
-                    <th style={{ padding: '12px 8px', fontSize: '11px', fontWeight: '700', color: '#64748b', width: '220px', textAlign: 'center' }}>ACTIONS</th>
+                    <th style={{ padding: '12px 8px', fontSize: '11px', fontWeight: '700', color: '#64748b', width: '130px', textAlign: 'center' }}>ACTIONS</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -264,13 +264,31 @@ const MarchesContent = () => {
                             {bc.statut || 'En cours'}
                           </span>
                         </td>
-                        <td style={{ padding: '14px 8px', display: 'flex', gap: '8px', justifyContent: 'center' }}>
+                        <td style={{ padding: '14px 8px', display: 'flex', gap: '8px', justifyContent: 'center', alignItems: 'center' }}>
                           <button 
                             onClick={() => setSelectedBcForView(bc)} 
-                            className="btn-secondary" 
-                            style={{ padding: '6px 12px', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px' }}
+                            title="Voir"
+                            style={{
+                              width: '32px', height: '32px',
+                              borderRadius: '8px',
+                              border: '1px solid rgba(15, 118, 110, 0.18)',
+                              backgroundColor: 'rgba(15, 118, 110, 0.05)',
+                              color: '#0f766e',
+                              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                              cursor: 'pointer',
+                              transition: 'all 0.2s ease',
+                              outline: 'none',
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.backgroundColor = '#0f766e';
+                              e.currentTarget.style.color = '#ffffff';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.backgroundColor = 'rgba(15, 118, 110, 0.05)';
+                              e.currentTarget.style.color = '#0f766e';
+                            }}
                           >
-                            <Eye size={12} /> Voir
+                            <Eye size={16} />
                           </button>
                           <button 
                             onClick={() => {
@@ -293,17 +311,53 @@ const MarchesContent = () => {
                               });
                               setShowBcModal(true);
                             }} 
-                            className="btn-secondary" 
-                            style={{ padding: '6px 12px', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#3b82f6', borderColor: 'rgba(59,130,246,0.2)' }}
+                            title="Modifier"
+                            style={{
+                              width: '32px', height: '32px',
+                              borderRadius: '8px',
+                              border: '1px solid rgba(59, 130, 246, 0.18)',
+                              backgroundColor: 'rgba(59, 130, 246, 0.05)',
+                              color: '#3b82f6',
+                              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                              cursor: 'pointer',
+                              transition: 'all 0.2s ease',
+                              outline: 'none',
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.backgroundColor = '#3b82f6';
+                              e.currentTarget.style.color = '#ffffff';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.backgroundColor = 'rgba(59, 130, 246, 0.05)';
+                              e.currentTarget.style.color = '#3b82f6';
+                            }}
                           >
-                            Modifier
+                            <Edit2 size={15} />
                           </button>
                           <button 
                             onClick={() => handleDeleteBc(bc.id)} 
-                            className="btn-secondary" 
-                            style={{ padding: '6px 12px', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#ef4444', borderColor: 'rgba(239,68,68,0.2)' }}
+                            title="Supprimer"
+                            style={{
+                              width: '32px', height: '32px',
+                              borderRadius: '8px',
+                              border: '1px solid rgba(239, 68, 68, 0.18)',
+                              backgroundColor: 'rgba(239, 68, 68, 0.05)',
+                              color: '#ef4444',
+                              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                              cursor: 'pointer',
+                              transition: 'all 0.2s ease',
+                              outline: 'none',
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.backgroundColor = '#ef4444';
+                              e.currentTarget.style.color = '#ffffff';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.05)';
+                              e.currentTarget.style.color = '#ef4444';
+                            }}
                           >
-                            Supprimer
+                            <Trash2 size={15} />
                           </button>
                         </td>
                       </tr>
