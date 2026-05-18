@@ -112,7 +112,7 @@ const parseQtyValue = (qtyStr) => {
 };
 
 const MenusContent = () => {
-  const { checkMenuPrices, setShowNotifications } = useDashboard();
+  const { checkMenuPrices, setShowNotifications, addNotification } = useDashboard();
   const today = new Date();
   const todayIso = formatDateISO(today);
 
@@ -156,7 +156,89 @@ const MenusContent = () => {
       const res = await api.get('/menus', {
         params: { week_start: formatDateISO(monday) },
       });
-      setMenus(res.data);
+      const fetchedMenus = res.data;
+      setMenus(fetchedMenus);
+
+      // Perform automatic background scan of the fetched week menus
+      fetchedMenus.forEach((menu) => {
+        const dateObj = new Date(menu.date);
+        const monthsFr = [
+          'janvier', 'février', 'mars', 'avril', 'mai', 'juin', 
+          'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'
+        ];
+        const daysFr = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
+        const dayLabel = `${daysFr[dateObj.getDay()]} ${dateObj.getDate()} ${monthsFr[dateObj.getMonth()]} ${dateObj.getFullYear()}`;
+        
+        // 1. Budget check (> 25 DH)
+        const budget = analyzeMenuBudget(menu);
+        if (budget.exceeds) {
+          let message;
+          if (budget.overItems.length > 0 && budget.total > MENU_PRICE_LIMIT_DH) {
+            message = `Le menu du ${dayLabel} : ${budget.overItems.length} article(s) > ${MENU_PRICE_LIMIT_DH} DH et total ${budget.total.toFixed(2)} DH/résident.`;
+          } else if (budget.overItems.length > 0) {
+            message = `Le menu du ${dayLabel} contient ${budget.overItems.length} article(s) au-delà de ${MENU_PRICE_LIMIT_DH} DH (${budget.overItems.map((i) => i.label).join(', ')}).`;
+          } else {
+            message = `Le menu du ${dayLabel} totalise ${budget.total.toFixed(2)} DH/résident (seuil : ${MENU_PRICE_LIMIT_DH} DH).`;
+          }
+          addNotification({
+            type: 'alert',
+            title: 'Dépassement budget',
+            message,
+            tab: 'menus',
+          });
+        }
+
+        // 2. Stock check
+        const residents = menu.residents || 450;
+        const allItems = [
+          ...mealTextToItems(menu.petit_dejeuner),
+          ...mealTextToItems(menu.dejeuner),
+          ...mealTextToItems(menu.diner),
+        ];
+
+        const shortages = [];
+        const aggregated = new Map();
+        
+        allItems.forEach((item) => {
+          const key = item.name.toLowerCase();
+          const perPerson = parseQtyValue(item.qty);
+          if (aggregated.has(key)) {
+            const prev = aggregated.get(key);
+            aggregated.set(key, { ...prev, perPerson: prev.perPerson + perPerson });
+          } else {
+            aggregated.set(key, { name: item.name, perPerson });
+          }
+        });
+
+        Array.from(aggregated.values()).forEach(({ name, perPerson }) => {
+          const nameLower = name.toLowerCase();
+          const { stock: stockDispo, unit: stockUnit } = findStockForItem(nameLower);
+          const totalNeeded = Math.round(perPerson * residents);
+
+          let neededCompare = totalNeeded;
+          if (stockUnit === 'kg') {
+            neededCompare = totalNeeded / 100;
+          } else if (stockUnit === 'L') {
+            neededCompare = totalNeeded / 50;
+          }
+
+          if (neededCompare > stockDispo) {
+            const formatNeeded = stockUnit === 'kg' ? `${neededCompare.toFixed(1)} kg` : (stockUnit === 'L' ? `${neededCompare.toFixed(1)} L` : `${totalNeeded} pcs`);
+            const formatStock = `${stockDispo} ${stockUnit}`;
+            shortages.push(`${name} (Besoin: ${formatNeeded}, Stock: ${formatStock})`);
+          }
+        });
+
+        if (shortages.length > 0) {
+          addNotification({
+            type: 'warning',
+            title: 'Alerte Stock Insuffisant',
+            message: `Le menu du ${dayLabel} nécessite plus de stock que disponible pour : ${shortages.join(', ')}.`,
+            tab: 'menus'
+          });
+        }
+      });
+
     } catch (err) {
       console.error('Erreur lors de la récupération des menus:', err);
     } finally {
@@ -203,6 +285,57 @@ const MenusContent = () => {
       setMenus((prev) => prev.map((m) => (m.id === selectedMenu.id ? res.data.menu : m)));
 
       if (checkMenuPrices(editFormData, getSelectedDayFullText())) {
+        setShowNotifications(true);
+      }
+
+      // Check stock shortages for the newly submitted menu ingredients
+      const residents = editFormData.residents || 450;
+      const allItems = [
+        ...mealTextToItems(editFormData.petit_dejeuner),
+        ...mealTextToItems(editFormData.dejeuner),
+        ...mealTextToItems(editFormData.diner),
+      ];
+
+      const shortages = [];
+      const aggregated = new Map();
+      
+      allItems.forEach((item) => {
+        const key = item.name.toLowerCase();
+        const perPerson = parseQtyValue(item.qty);
+        if (aggregated.has(key)) {
+          const prev = aggregated.get(key);
+          aggregated.set(key, { ...prev, perPerson: prev.perPerson + perPerson });
+        } else {
+          aggregated.set(key, { name: item.name, perPerson });
+        }
+      });
+
+      Array.from(aggregated.values()).forEach(({ name, perPerson }) => {
+        const nameLower = name.toLowerCase();
+        const { stock: stockDispo, unit: stockUnit } = findStockForItem(nameLower);
+        const totalNeeded = Math.round(perPerson * residents);
+
+        let neededCompare = totalNeeded;
+        if (stockUnit === 'kg') {
+          neededCompare = totalNeeded / 100;
+        } else if (stockUnit === 'L') {
+          neededCompare = totalNeeded / 50;
+        }
+
+        if (neededCompare > stockDispo) {
+          const formatNeeded = stockUnit === 'kg' ? `${neededCompare.toFixed(1)} kg` : (stockUnit === 'L' ? `${neededCompare.toFixed(1)} L` : `${totalNeeded} pcs`);
+          const formatStock = `${stockDispo} ${stockUnit}`;
+          shortages.push(`${name} (Besoin: ${formatNeeded}, Stock: ${formatStock})`);
+        }
+      });
+
+      if (shortages.length > 0) {
+        addNotification({
+          type: 'warning',
+          title: 'Alerte Stock Insuffisant',
+          message: `Le menu du ${getSelectedDayFullText()} nécessite plus de stock que disponible pour : ${shortages.join(', ')}.`,
+          tab: 'menus'
+        });
         setShowNotifications(true);
       }
 

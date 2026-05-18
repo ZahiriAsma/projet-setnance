@@ -15,6 +15,15 @@ function loadStoredNotifications() {
   }
 }
 
+function loadSysConfig() {
+  try {
+    const raw = localStorage.getItem('sysConfig');
+    return raw ? JSON.parse(raw) : { theme: 'light', language: 'fr', itemsPerPage: 10 };
+  } catch {
+    return { theme: 'light', language: 'fr', itemsPerPage: 10 };
+  }
+}
+
 export function DashboardProvider({ children, onNavigate }) {
   const [notifications, setNotifications] = useState(loadStoredNotifications);
   const [searchQuery, setSearchQuery] = useState('');
@@ -22,6 +31,13 @@ export function DashboardProvider({ children, onNavigate }) {
   const [searchLoading, setSearchLoading] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showSearchResults, setShowSearchResults] = useState(false);
+  const [sysConfig, setSysConfigState] = useState(loadSysConfig);
+
+  const setSysConfig = useCallback((updated) => {
+    const next = typeof updated === 'function' ? updated(sysConfig) : updated;
+    setSysConfigState(next);
+    localStorage.setItem('sysConfig', JSON.stringify(next));
+  }, [sysConfig]);
 
   useEffect(() => {
     localStorage.setItem(NOTIF_STORAGE_KEY, JSON.stringify(notifications));
@@ -40,7 +56,13 @@ export function DashboardProvider({ children, onNavigate }) {
       type: 'info',
       ...notification,
     };
-    setNotifications((prev) => [entry, ...prev].slice(0, 30));
+    setNotifications((prev) => {
+      const exists = prev.some(
+        (n) => n.title === notification.title && n.message === notification.message
+      );
+      if (exists) return prev;
+      return [entry, ...prev].slice(0, 30);
+    });
     return entry;
   }, []);
 
@@ -52,6 +74,10 @@ export function DashboardProvider({ children, onNavigate }) {
 
   const markAllNotificationsRead = useCallback(() => {
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+  }, []);
+
+  const deleteNotification = useCallback((id) => {
+    setNotifications((prev) => prev.filter((n) => n.id !== id));
   }, []);
 
   const checkMenuPrices = useCallback(
@@ -122,6 +148,7 @@ export function DashboardProvider({ children, onNavigate }) {
       addNotification,
       markNotificationRead,
       markAllNotificationsRead,
+      deleteNotification,
       checkMenuPrices,
       searchQuery,
       setSearchQuery,
@@ -132,6 +159,8 @@ export function DashboardProvider({ children, onNavigate }) {
       showSearchResults,
       setShowSearchResults,
       handleSearchSelect,
+      sysConfig,
+      setSysConfig,
     }),
     [
       notifications,
@@ -139,6 +168,7 @@ export function DashboardProvider({ children, onNavigate }) {
       addNotification,
       markNotificationRead,
       markAllNotificationsRead,
+      deleteNotification,
       checkMenuPrices,
       searchQuery,
       searchResults,
@@ -146,6 +176,8 @@ export function DashboardProvider({ children, onNavigate }) {
       showNotifications,
       showSearchResults,
       handleSearchSelect,
+      sysConfig,
+      setSysConfig,
     ]
   );
 
