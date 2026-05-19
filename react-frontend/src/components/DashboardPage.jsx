@@ -8,6 +8,7 @@ import MarchesContent from './MarchesContent';
 import FournisseursContent from './FournisseursContent';
 import MenusContent from './MenusContent';
 import ParametresContent from './ParametresContent';
+import BordereauContent from './BordereauContent';
 import { useDashboard } from '../context/DashboardContext';
 
 const DashboardPage = () => {
@@ -34,6 +35,7 @@ const DashboardPage = () => {
     fr: {
       dashboard: 'Tableau de bord', marches: 'Marchés', stock: 'Stock', fournisseurs: 'Fournisseurs',
       rapports: 'Rapports & statistiques', menus: 'Menus journaliers', parametres: 'Paramètres',
+      bordereau: 'Import Bordereau', facture: 'Factures',
       navMain: 'NAVIGATION PRINCIPALE', analyse: 'ANALYSE', systeme: 'SYSTÈME',
       search: 'Rechercher produit, marché, fournisseur...', logout: 'Déconnexion',
       brand: 'Gestion des internats OFPPT', welcome: 'Bonjour', underControl: 'Tout est sous contrôle.',
@@ -51,6 +53,7 @@ const DashboardPage = () => {
     ar: {
       dashboard: 'لوحة التحكم', marches: 'المناقصات', stock: 'المخزون', fournisseurs: 'الموردون',
       rapports: 'التقارير والإحصاءات', menus: 'قوائم الطعام', parametres: 'الإعدادات',
+      bordereau: 'استيراد جدول الأسعار', facture: 'الفواتير',
       navMain: 'التنقل الرئيسي', analyse: 'تحليل', systeme: 'النظام',
       search: 'ابحث عن منتج أو مناقصة أو مورد...', logout: 'تسجيل الخروج',
       brand: 'إدارة داخليات OFPPT', welcome: 'مرحباً', underControl: 'كل شيء تحت السيطرة.',
@@ -68,6 +71,7 @@ const DashboardPage = () => {
     en: {
       dashboard: 'Dashboard', marches: 'Tenders', stock: 'Stock', fournisseurs: 'Suppliers',
       rapports: 'Reports & Statistics', menus: 'Daily Menus', parametres: 'Settings',
+      bordereau: 'Import Bordereau', facture: 'Invoices',
       navMain: 'MAIN NAVIGATION', analyse: 'ANALYSIS', systeme: 'SYSTEM',
       search: 'Search product, tender, supplier...', logout: 'Logout',
       brand: 'OFPPT Internship Management', welcome: 'Hello', underControl: 'Everything is under control.',
@@ -159,6 +163,7 @@ const DashboardPage = () => {
     else if (q.includes('menu') || q.includes('repas') || q.includes('dejeuner')) setActiveTab('menus');
     else if (q.includes('param') || q.includes('profil') || q.includes('config')) setActiveTab('parametres');
     else if (q.includes('rapport') || q.includes('stat')) setActiveTab('rapports');
+    else if (q.includes('border') || q.includes('excel') || q.includes('import')) setActiveTab('bordereau');
     setLocalSearchQuery('');
   };
 
@@ -380,6 +385,7 @@ const DashboardPage = () => {
           <NavItem id="marches" icon={FileText} label={nt.marches} badge="2" />
           <NavItem id="stock" icon={Package} label={nt.stock} />
           <NavItem id="fournisseurs" icon={Users} label={nt.fournisseurs} />
+          <NavItem id="bordereau" icon={FileSpreadsheet} label={nt.bordereau} />
 
           <NavGroup title={nt.analyse} />
           <NavItem id="rapports" icon={BarChart3} label={nt.rapports} />
@@ -447,6 +453,7 @@ const DashboardPage = () => {
               {activeTab === 'dashboard' && nt.dashboard}
               {activeTab === 'marches' && nt.marches}
               {activeTab === 'fournisseurs' && nt.fournisseurs}
+              {activeTab === 'bordereau' && nt.bordereau}
               {activeTab === 'menus' && nt.menus}
               {activeTab === 'parametres' && nt.parametres}
             </span>
@@ -885,6 +892,7 @@ const DashboardPage = () => {
           )}
           {activeTab === 'marches' && <MarchesContent />}
           {activeTab === 'fournisseurs' && <FournisseursContent />}
+          {activeTab === 'bordereau' && <BordereauContent />}
           {activeTab === 'menus' && <MenusContent />}
           {activeTab === 'parametres' && <ParametresContent />}
         </div>

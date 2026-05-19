@@ -25,7 +25,12 @@ class BonCommande extends Model
         'montantTVA',
         'montantTTC',
         'statut',
-        'fournisseur_id'
+        'fournisseur_id',
+        'items'
+    ];
+
+    protected $casts = [
+        'items' => 'array'
     ];
 
     public function fournisseur()

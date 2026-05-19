@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { 
+import {
   Plus, Filter, Folder, Calendar, DollarSign, Archive, FolderOpen,
-  ChevronLeft, FileText, Printer, Download, Edit2, Trash2, Eye
+  ChevronLeft, FileText, Printer, Download, Edit2, Trash2, Eye, Search, X
 } from 'lucide-react';
+import * as XLSX from 'xlsx';
 import api from '../api/axios';
 
 const MarchesContent = () => {
@@ -28,19 +29,83 @@ const MarchesContent = () => {
     dateEmission: new Date().toISOString().split('T')[0],
     budget: 'Budget de Fonctionnement',
     exercice: new Date().getFullYear(),
-    rubrique: '',
+    rubrique: 'ACHAT PRODUITS ALIMENTAIRES',
     referenceMarcheCadre: '',
     lieuLivraison: 'Internat OFPPT Casablanca',
-    conditionsGenerales: 'Livraison sous 5 jours. Paiement à 60 jours.',
+    conditionsGenerales: 'Nous vous prions de bien vouloir exécuter la présente commande aux conditions ci-après.',
     conditionsParticulieres: '',
-    montantHT: '',
-    montantTVA: '',
-    montantTTC: '',
+    montantHT: '0.00',
+    montantTVA: '0.00',
+    montantTTC: '0.00',
     statut: 'En cours',
-    fournisseur_id: ''
+    fournisseur_id: '',
+    items: []
   });
   const [editingBc, setEditingBc] = useState(null);
   const [selectedBcForView, setSelectedBcForView] = useState(null);
+  const [bordereauItems, setBordereauItems] = useState([]);
+
+  // Dynamic state for Bons de livraison documents
+
+  const [bls, setBls] = useState([
+    {
+      id: 101,
+      numeroBL: 'BL-2024-001',
+      dateLivraison: '2024-05-10',
+      rubrique: 'ACHAT PRODUITS ALIMENTAIRES',
+      exercice: 2024,
+      referenceBCs: ['BC-2024-089-001'],
+      lieuLivraison: 'Casablanca',
+      fournisseur_id: '1',
+      items: [
+        { price_number: '1', service_description: 'Huile de table 5L', unit_of_measure: 'Carton', qty: 10, unit_price_ht: 180, vat_rate: 20 },
+        { price_number: '2', service_description: 'Sucre en poudre 50kg', unit_of_measure: 'Sac', qty: 5, unit_price_ht: 350, vat_rate: 20 }
+      ],
+      montantHT: '3550.00',
+      montantTVA: '710.00',
+      montantTTC: '4260.00',
+      statut: 'Validé'
+    },
+    {
+      id: 102,
+      numeroBL: 'BL-2024-002',
+      dateLivraison: '2024-05-12',
+      rubrique: 'ACHAT PRODUITS ALIMENTAIRES',
+      exercice: 2024,
+      referenceBCs: ['BC-2024-089-002'],
+      lieuLivraison: 'Casablanca',
+      fournisseur_id: '1',
+      items: [
+        { price_number: '3', service_description: 'Riz long grain 25kg', unit_of_measure: 'Sac', qty: 8, unit_price_ht: 280, vat_rate: 20 },
+        { price_number: '1', service_description: 'Huile de table 5L', unit_of_measure: 'Carton', qty: 15, unit_price_ht: 180, vat_rate: 20 }
+      ],
+      montantHT: '4940.00',
+      montantTVA: '988.00',
+      montantTTC: '5928.00',
+      statut: 'Validé'
+    }
+  ]);
+  const [showBlModal, setShowBlModal] = useState(false);
+  const [newBlData, setNewBlData] = useState({
+    numeroBL: '',
+    dateLivraison: new Date().toISOString().split('T')[0],
+    exercice: new Date().getFullYear(),
+    rubrique: 'Alimentation générale',
+    referenceBCs: [],
+    lieuLivraison: 'Internat OFPPT Casablanca',
+    conditionsGenerales: 'Livraison sous 5 jours. Paiement à 60 jours.',
+    conditionsParticulieres: '',
+    montantHT: '0.00',
+    montantTVA: '0.00',
+    montantTTC: '0.00',
+    statut: 'En cours',
+    fournisseur_id: '',
+    items: []
+  });
+  const [editingBl, setEditingBl] = useState(null);
+  const [selectedBlForView, setSelectedBlForView] = useState(null);
+  const [blDropdownOpen, setBlDropdownOpen] = useState(false);
+
 
   // Dynamic state for Bon de commande items (used when viewing a BC)
   const [bcItems, setBcItems] = useState([
@@ -54,7 +119,17 @@ const MarchesContent = () => {
     fetchMarches();
     fetchFournisseurs();
     fetchBcs();
+    fetchBordereauItems();
   }, []);
+
+  const fetchBordereauItems = async () => {
+    try {
+      const response = await api.get('/bordereau');
+      setBordereauItems(response.data);
+    } catch (error) {
+      console.error('Erreur lors du chargement du bordereau', error);
+    }
+  };
 
   const fetchMarches = async () => {
     try {
@@ -112,6 +187,113 @@ const MarchesContent = () => {
     }
   };
 
+  const [productSearch, setProductSearch] = useState('');
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [selectedBordereauItem, setSelectedBordereauItem] = useState(null);
+  const [tempQty, setTempQty] = useState(1);
+  const [tempPrice, setTempPrice] = useState('');
+  const [tempVat, setTempVat] = useState(20);
+
+  const recalculateBcTotals = (itemsList) => {
+    let ht = 0;
+    let tva = 0;
+    itemsList.forEach(item => {
+      const itemHt = (parseFloat(item.qty) || 0) * (parseFloat(item.unit_price_ht) || 0);
+      const itemTva = itemHt * ((parseFloat(item.vat_rate) || 0) / 100);
+      ht += itemHt;
+      tva += itemTva;
+    });
+    const ttc = ht + tva;
+    setNewBcData(prev => ({
+      ...prev,
+      items: itemsList,
+      montantHT: ht.toFixed(2),
+      montantTVA: tva.toFixed(2),
+      montantTTC: ttc.toFixed(2)
+    }));
+  };
+
+  const handleAddProductToBc = () => {
+    if (!selectedBordereauItem) {
+      alert("Veuillez sélectionner un produit du bordereau.");
+      return;
+    }
+    const qty = parseFloat(tempQty) || 0;
+    if (qty <= 0) {
+      alert("La quantité doit être supérieure à 0.");
+      return;
+    }
+    const price = parseFloat(tempPrice) || 0;
+
+    // Check if product already added
+    const existingItems = newBcData.items || [];
+    const isAlreadyAdded = existingItems.some(
+      item => item.price_number === selectedBordereauItem.price_number
+    );
+    if (isAlreadyAdded) {
+      alert("Ce produit est déjà ajouté au bon de commande.");
+      return;
+    }
+
+    const newItem = {
+      price_number: selectedBordereauItem.price_number,
+      service_description: selectedBordereauItem.service_description,
+      unit_of_measure: selectedBordereauItem.unit_of_measure,
+      qty: qty,
+      unit_price_ht: price,
+      vat_rate: parseFloat(tempVat) || 20
+    };
+
+    const updatedItems = [...existingItems, newItem];
+    recalculateBcTotals(updatedItems);
+
+    // Reset inputs
+    setProductSearch('');
+    setSelectedBordereauItem(null);
+    setTempQty(1);
+    setTempPrice('');
+    setTempVat(20);
+  };
+
+  const handleRemoveProductFromBc = (index) => {
+    const updatedItems = [...(newBcData.items || [])];
+    updatedItems.splice(index, 1);
+    recalculateBcTotals(updatedItems);
+  };
+
+  const handleDirectProductAdd = (item) => {
+    const existingItems = newBcData.items || [];
+    const isAlreadyAdded = existingItems.some(
+      existingItem => existingItem.price_number === item.price_number
+    );
+    if (isAlreadyAdded) {
+      alert("Ce produit est déjà ajouté au bon de commande.");
+      setProductSearch('');
+      setShowSuggestions(false);
+      return;
+    }
+
+    const newItem = {
+      price_number: item.price_number,
+      service_description: item.service_description,
+      unit_of_measure: item.unit_of_measure,
+      qty: 1,
+      unit_price_ht: parseFloat(item.unit_price_ht) || 0,
+      vat_rate: parseFloat(item.vat_rate) || 20
+    };
+
+    const updatedItems = [...existingItems, newItem];
+    recalculateBcTotals(updatedItems);
+    setProductSearch('');
+    setShowSuggestions(false);
+  };
+
+  const handleUpdateItem = (index, field, value) => {
+    const updatedItems = [...(newBcData.items || [])];
+    updatedItems[index] = { ...updatedItems[index], [field]: parseFloat(value) || 0 };
+    recalculateBcTotals(updatedItems);
+  };
+
   const handleSaveBc = async (e) => {
     e.preventDefault();
     if (!newBcData.numeroBC || !newBcData.dateEmission) {
@@ -141,16 +323,17 @@ const MarchesContent = () => {
         dateEmission: new Date().toISOString().split('T')[0],
         budget: 'Budget de Fonctionnement',
         exercice: new Date().getFullYear(),
-        rubrique: '',
+        rubrique: 'ACHAT PRODUITS ALIMENTAIRES',
         referenceMarcheCadre: '',
         lieuLivraison: 'Internat OFPPT Casablanca',
-        conditionsGenerales: 'Livraison sous 5 jours. Paiement à 60 jours.',
+        conditionsGenerales: 'Nous vous prions de bien vouloir exécuter la présente commande aux conditions ci-après.',
         conditionsParticulieres: '',
-        montantHT: '',
-        montantTVA: '',
-        montantTTC: '',
+        montantHT: '0.00',
+        montantTVA: '0.00',
+        montantTTC: '0.00',
         statut: 'En cours',
-        fournisseur_id: ''
+        fournisseur_id: '',
+        items: []
       });
       setShowBcModal(false);
     } catch (error) {
@@ -171,10 +354,496 @@ const MarchesContent = () => {
     }
   };
 
+  const handleExportBcToExcel = (bc) => {
+    const filename = `Bon_de_Commande_${bc.numeroBC || 'Nouveau'}.xls`;
+    const supplier = fournisseurs.find(f => f.id.toString() === bc.fournisseur_id?.toString()) || {};
+
+    const items = Array.isArray(bc.items) ? bc.items : [];
+    
+    let tva9 = 0; let tva10 = 0; let tva20 = 0;
+    
+    items.forEach(item => {
+      const qty = parseFloat(item.qty || item.quantity || 0);
+      const price = parseFloat(item.unit_price_ht || item.price || 0);
+      const rate = parseFloat(item.vat_rate || item.tva || 20);
+      const totalHt = qty * price;
+      const tvaAmount = totalHt * (rate / 100);
+      if (rate === 9) tva9 += tvaAmount;
+      else if (rate === 10) tva10 += tvaAmount;
+      else if (rate === 20) tva20 += tvaAmount;
+    });
+
+    const mHT = parseFloat(bc.montantHT || 0);
+    const mTTC = parseFloat(bc.montantTTC || 0);
+
+    // Build a single table with 8 columns to ensure perfect Excel alignment
+    let html = `
+      <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+      <head>
+        <meta charset="utf-8">
+        <style>
+          body { font-family: 'Arial', sans-serif; font-size: 11px; color: #000; }
+          table { border-collapse: collapse; width: 100%; }
+          td, th { padding: 5px; vertical-align: top; font-size: 11px; }
+          .border-all { border: 1px solid #000; }
+          .bg-grey { background-color: #f0f0f0; }
+          .text-center { text-align: center; }
+          .text-right { text-align: right; }
+          .text-left { text-align: left; }
+          .bold { font-weight: bold; }
+          .title-text { font-size: 16px; font-weight: bold; border: 2px solid #000; padding: 10px; display: inline-block; letter-spacing: 2px; text-align: center; }
+        </style>
+      </head>
+      <body>
+        <table>
+          <!-- Set column widths roughly -->
+          <colgroup>
+            <col width="40">
+            <col width="300">
+            <col width="60">
+            <col width="60">
+            <col width="80">
+            <col width="60">
+            <col width="80">
+            <col width="100">
+          </colgroup>
+
+          <!-- Row 1: Header -->
+          <tr>
+            <td colspan="2" class="bold" style="font-size: 10px;">
+              OFFICE DE LA FORMATION<br>
+              PROFESSIONNELLE<br>
+              ET DE LA PROMOTION DU<br>
+              TRAVAIL<br>
+              <span style="font-weight: normal; text-transform: none;">
+              Direction Régionale Drâa Tafilalet<br>
+              ISBTP QUARTIER EL MATAR<br>
+              ERRACHIDIA<br>
+              Tél : 0535572740
+              </span>
+            </td>
+            <td colspan="4" class="text-center">
+              <span class="title-text">BON DE COMMANDE</span><br><br>
+              <span class="bold">B.C PA &nbsp;&nbsp; ${bc.numeroBC || '—'}</span>
+            </td>
+            <td colspan="2" class="text-right" style="font-size: 10px;">
+              <span class="bold">Références du Fournisseur</span><br>
+              Sté ${supplier.raisonSociale || '—'}<br>
+              ${supplier.adresse || '—'}<br>
+              ERRACHIDIA<br>
+              PATENTE N° : ${supplier.patente || '—'} &nbsp;&nbsp; RC : ${supplier.rc || '—'}<br>
+              Errachidia<br>
+              IF : ${supplier.if || '—'} &nbsp;&nbsp; ICE : ${supplier.ice || '—'}<br>
+              RIB : ${supplier.rib || '—'}
+            </td>
+          </tr>
+          
+          <!-- Spacer -->
+          <tr><td colspan="8"></td></tr>
+
+          <!-- Row: Info 1 -->
+          <tr>
+            <td class="border-all bg-grey bold">Budget</td>
+            <td colspan="3" class="border-all">${bc.budget || 'BF'}</td>
+            <td colspan="2" class="border-all bg-grey bold">Réf. Marché Cadre</td>
+            <td colspan="2" class="border-all">${bc.referenceMarcheCadre || 'N° 07-E/2024'}</td>
+          </tr>
+          <!-- Row: Info 2 -->
+          <tr>
+            <td class="border-all bg-grey bold">Exercice</td>
+            <td colspan="3" class="border-all">${bc.exercice || new Date().getFullYear()}</td>
+            <td colspan="2" class="border-all bg-grey bold">Lieu de livraison</td>
+            <td colspan="2" class="border-all">${bc.lieuLivraison || 'Ouarzazate'}</td>
+          </tr>
+          <!-- Row: Info 3 -->
+          <tr>
+            <td class="border-all bg-grey bold">Rubrique</td>
+            <td colspan="3" class="border-all">${bc.rubrique || 'ACHAT PRODUITS ALIMENTAIRES'}</td>
+            <td colspan="2" class="border-all bg-grey bold">Date de livraison</td>
+            <td colspan="2" class="border-all">${bc.dateEmission || ''}</td>
+          </tr>
+
+          <!-- Spacer -->
+          <tr><td colspan="8"></td></tr>
+
+          <!-- Items Header -->
+          <tr>
+            <td class="border-all bg-grey bold text-center">N°</td>
+            <td class="border-all bg-grey bold text-left">Désignations et références</td>
+            <td class="border-all bg-grey bold text-center">Unité</td>
+            <td class="border-all bg-grey bold text-center">Qté</td>
+            <td class="border-all bg-grey bold text-center">P.U HT</td>
+            <td class="border-all bg-grey bold text-center">Taux TVA</td>
+            <td class="border-all bg-grey bold text-center">TVA</td>
+            <td class="border-all bg-grey bold text-center">Total HT</td>
+          </tr>
+    `;
+
+    items.forEach((item, idx) => {
+      const priceNum = item.price_number || (idx + 1);
+      const designation = item.service_description || item.designation || item.label || '—';
+      const unit = item.unit_of_measure || item.unit || '—';
+      const qty = parseFloat(item.qty || item.quantity || 0);
+      const price = parseFloat(item.unit_price_ht || item.price || 0);
+      const rate = parseFloat(item.vat_rate || item.tva || 20);
+      const totalHt = qty * price;
+      const tvaVal = totalHt * (rate / 100);
+
+      html += `
+          <tr>
+            <td class="border-all text-center">${priceNum}</td>
+            <td class="border-all">${designation}</td>
+            <td class="border-all text-center">${unit}</td>
+            <td class="border-all text-center">${qty}</td>
+            <td class="border-all text-right">${price.toFixed(2).replace('.', ',')}</td>
+            <td class="border-all text-center">${rate}%</td>
+            <td class="border-all text-right">${tvaVal.toFixed(2).replace('.', ',')}</td>
+            <td class="border-all text-right">${totalHt.toFixed(2).replace('.', ',')}</td>
+          </tr>
+      `;
+    });
+
+    const minRows = 8;
+    if (items.length < minRows) {
+      for (let i = items.length; i < minRows; i++) {
+        html += `
+          <tr>
+            <td class="border-all">&nbsp;</td>
+            <td class="border-all">&nbsp;</td>
+            <td class="border-all">&nbsp;</td>
+            <td class="border-all">&nbsp;</td>
+            <td class="border-all">&nbsp;</td>
+            <td class="border-all">&nbsp;</td>
+            <td class="border-all">&nbsp;</td>
+            <td class="border-all">&nbsp;</td>
+          </tr>
+        `;
+      }
+    }
+
+    html += `
+          <!-- Totals Area -->
+          <tr>
+            <td colspan="6" rowspan="5" style="vertical-align: bottom; font-style: italic; color: #555;">
+              Nous vous prions de bien vouloir exécuter la présente commande aux conditions ci-après.
+            </td>
+            <td class="border-all bg-grey bold">Total H.T</td>
+            <td class="border-all text-right bold">${mHT.toFixed(2).replace('.', ',')} MAD</td>
+          </tr>
+          <tr>
+            <td class="border-all bg-grey bold">TVA 9%</td>
+            <td class="border-all text-right">${tva9.toFixed(2).replace('.', ',')} MAD</td>
+          </tr>
+          <tr>
+            <td class="border-all bg-grey bold">TVA 10%</td>
+            <td class="border-all text-right">${tva10.toFixed(2).replace('.', ',')} MAD</td>
+          </tr>
+          <tr>
+            <td class="border-all bg-grey bold">TVA 20%</td>
+            <td class="border-all text-right">${tva20.toFixed(2).replace('.', ',')} MAD</td>
+          </tr>
+          <tr>
+            <td class="border-all bg-grey bold" style="font-size: 13px; color: #000;">Total T.T.C</td>
+            <td class="border-all text-right bold" style="font-size: 13px; background-color: #f2f8ff; color: #0055cc;">${mTTC.toFixed(2).replace('.', ',')} MAD</td>
+          </tr>
+          
+          <!-- Spacer -->
+          <tr><td colspan="8">&nbsp;</td></tr>
+
+          <!-- Signatures -->
+          <tr>
+            <td colspan="6"></td>
+            <td colspan="2" class="text-center bold">
+              Errachidia, le ${bc.dateEmission || '—'}<br><br>
+              <span style="text-decoration: underline;">LE SOUS-ORDONNATEUR</span>
+            </td>
+          </tr>
+        </table>
+      </body>
+      </html>
+    `;
+
+    const blob = new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleExportAllBcsToExcel = () => {
+    const providerBcs = bcs.filter(bc => bc.fournisseur_id?.toString() === selectedMarche?.id_fournisseur?.toString());
+    const filename = `Bons_de_commande_${selectedMarche.titulaire}.xls`;
+
+    let html = `
+      <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+      <head>
+        <meta charset="utf-8">
+        <style>
+          table { border-collapse: collapse; width: 100%; }
+          th, td { border: 1px solid #cbd5e1; padding: 8px; font-family: Arial, sans-serif; font-size: 13px; }
+          th { background-color: #0f766e; color: white; font-weight: bold; }
+          .title { font-size: 18px; font-weight: bold; color: #0f766e; text-align: center; padding-bottom: 20px; }
+          .right { text-align: right; }
+          .center { text-align: center; }
+          .bold { font-weight: bold; }
+        </style>
+      </head>
+      <body>
+        <div class="title">Bons de commande - Marché : ${selectedMarche.titulaire}</div>
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>N° Bon de commande</th>
+              <th>Date d'émission</th>
+              <th>Lieu de livraison</th>
+              <th class="right">Montant HT (MAD)</th>
+              <th class="right">Montant TVA (MAD)</th>
+              <th class="right">Montant TTC (MAD)</th>
+              <th class="center">Statut</th>
+            </tr>
+          </thead>
+          <tbody>
+    `;
+
+    providerBcs.forEach((bc, idx) => {
+      html += `
+        <tr>
+          <td class="center">${idx + 1}</td>
+          <td class="bold">${bc.numeroBC}</td>
+          <td class="center">${bc.dateEmission}</td>
+          <td>${bc.lieuLivraison || '—'}</td>
+          <td class="right">${parseFloat(bc.montantHT || 0).toFixed(2)}</td>
+          <td class="right">${parseFloat(bc.montantTVA || 0).toFixed(2)}</td>
+          <td class="right bold">${parseFloat(bc.montantTTC || 0).toFixed(2)}</td>
+          <td class="center">${bc.statut || 'En cours'}</td>
+        </tr>
+      `;
+    });
+
+    html += `
+          </tbody>
+        </table>
+      </body>
+      </html>
+    `;
+
+    const blob = new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleExportBlToExcel = (bl) => {
+    const filename = `${bl.numeroBL}.xls`;
+    let html = `
+      <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+      <head>
+        <meta charset="utf-8">
+        <style>
+          table { border-collapse: collapse; width: 100%; }
+          th, td { border: 1px solid #cbd5e1; padding: 8px; font-family: Arial, sans-serif; font-size: 13px; }
+          th { background-color: #0f766e; color: white; font-weight: bold; }
+          .title { font-size: 18px; font-weight: bold; color: #0f766e; text-align: center; padding-bottom: 20px; }
+          .right { text-align: right; }
+          .center { text-align: center; }
+          .bold { font-weight: bold; }
+        </style>
+      </head>
+      <body>
+        <div class="title">BON DE LIVRAISON : ${bl.numeroBL}</div>
+        
+        <table style="margin-bottom: 20px;">
+          <tr>
+            <td class="bold">Date de livraison:</td>
+            <td>${bl.dateLivraison}</td>
+            <td class="bold">BCs associés:</td>
+            <td>${bl.referenceBCs?.join(', ') || '—'}</td>
+          </tr>
+          <tr>
+            <td class="bold">Rubrique:</td>
+            <td>${bl.rubrique || '—'}</td>
+            <td class="bold">Statut:</td>
+            <td>${bl.statut || 'En cours'}</td>
+          </tr>
+        </table>
+
+        <h3>Liste des articles</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Désignation</th>
+              <th>Unité</th>
+              <th class="center">Quantité</th>
+              <th class="right">Prix Unitaire HT (MAD)</th>
+              <th class="right">Montant Total HT (MAD)</th>
+            </tr>
+          </thead>
+          <tbody>
+    `;
+
+    const items = Array.isArray(bl.items) ? bl.items : [];
+    items.forEach((item, idx) => {
+      const designation = item.service_description || item.designation || '—';
+      const unit = item.unit_of_measure || item.unit || '—';
+      const qty = parseFloat(item.qty || 0);
+      const price = parseFloat(item.unit_price_ht || item.price || 0);
+      const total = qty * price;
+      html += `
+        <tr>
+          <td class="center">${idx + 1}</td>
+          <td>${designation}</td>
+          <td class="center">${unit}</td>
+          <td class="center">${qty}</td>
+          <td class="right">${price.toFixed(2)}</td>
+          <td class="right">${total.toFixed(2)}</td>
+        </tr>
+      `;
+    });
+
+    html += `
+          </tbody>
+        </table>
+
+        <table style="margin-top: 20px; float: right; width: 300px;">
+          <tr>
+            <td class="bold">Montant HT:</td>
+            <td class="right">${parseFloat(bl.montantHT || 0).toFixed(2)} MAD</td>
+          </tr>
+          <tr>
+            <td class="bold">Montant TVA (20%):</td>
+            <td class="right">${parseFloat(bl.montantTVA || 0).toFixed(2)} MAD</td>
+          </tr>
+          <tr>
+            <td class="bold">Montant TTC:</td>
+            <td class="right bold" style="color: #0f766e;">${parseFloat(bl.montantTTC || 0).toFixed(2)} MAD</td>
+          </tr>
+        </table>
+      </body>
+      </html>
+    `;
+
+    const blob = new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  // --- BL Consolidator ---
+  useEffect(() => {
+    if (!showBlModal) return;
+    const selectedBCs = bcs.filter(bc => newBlData.referenceBCs.includes(bc.numeroBC));
+
+    // Merge all items from selected BCs, summing quantities for matching price numbers
+    const mergedMap = {};
+    selectedBCs.forEach(bc => {
+      const bcItems = Array.isArray(bc.items) ? bc.items : [];
+      bcItems.forEach(item => {
+        const key = item.price_number || item.service_description || item.designation || '';
+        if (!key) return;
+
+        const qty = parseFloat(item.qty || item.quantity || 0);
+        const pu = parseFloat(item.unit_price_ht || item.price || 0);
+        const vatRate = parseFloat(item.vat_rate !== undefined ? item.vat_rate : 20);
+
+        if (mergedMap[key]) {
+          mergedMap[key].qty += qty;
+          if (!mergedMap[key]._bcRefs.includes(bc.numeroBC)) {
+            mergedMap[key]._bcRefs.push(bc.numeroBC);
+          }
+        } else {
+          mergedMap[key] = {
+            ...item,
+            qty: qty,
+            unit_price_ht: pu,
+            vat_rate: vatRate,
+            _bcRefs: [bc.numeroBC],
+          };
+        }
+      });
+    });
+
+    const merged = Object.values(mergedMap).map(item => ({
+      ...item,
+      _bcRef: item._bcRefs.join(', ')
+    }));
+
+    let ht = 0, tva = 0;
+    merged.forEach(item => {
+      const lineHt = item.qty * item.unit_price_ht;
+      const lineTva = lineHt * (item.vat_rate / 100);
+      ht += lineHt;
+      tva += lineTva;
+    });
+
+    setNewBlData(prev => ({
+      ...prev,
+      items: merged,
+      montantHT: ht.toFixed(2),
+      montantTVA: tva.toFixed(2),
+      montantTTC: (ht + tva).toFixed(2)
+    }));
+  }, [newBlData.referenceBCs, showBlModal, bcs]);
+
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handleClick = (e) => {
+      if (blDropdownOpen && !e.target.closest('.bl-dropdown-container')) {
+        setBlDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [blDropdownOpen]);
+
+  const handleSaveBl = (e) => {
+    e.preventDefault();
+    if (!newBlData.numeroBL || !newBlData.dateLivraison) {
+      alert("Veuillez remplir tous les champs obligatoires.");
+      return;
+    }
+
+    if (editingBl) {
+      setBls(bls.map(bl => bl.id === editingBl.id ? { ...bl, ...newBlData } : bl));
+      setEditingBl(null);
+    } else {
+      const created = {
+        ...newBlData,
+        id: Date.now(),
+        fournisseur_id: selectedMarche?.id_fournisseur?.toString() || ''
+      };
+      setBls([...bls, created]);
+    }
+    setShowBlModal(false);
+  };
+
+  const handleDeleteBl = (id) => {
+    if (window.confirm("Êtes-vous sûr de vouloir supprimer ce bon de livraison ?")) {
+      setBls(bls.filter(bl => bl.id !== id));
+    }
+  };
+
+
   const renderDocumentContent = () => {
     const sName = fournisseurs.find(f => f.id === selectedMarche.id_fournisseur)?.raisonSociale || 'DISMA Maroc';
     const sICE = fournisseurs.find(f => f.id === selectedMarche.id_fournisseur)?.ice || '001234567000021';
-    
+
     if (activeDocTab === 'bc') {
       return (
         <div>
@@ -183,32 +852,60 @@ const MarchesContent = () => {
             <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '700', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
               <FileText size={20} color="#0f766e" /> Bons de commande
             </h3>
-            <button 
-              onClick={() => {
-                setEditingBc(null);
-                setNewBcData({
-                  numeroBC: `BC-${new Date().getFullYear()}-089-00${bcs.length + 1}`,
-                  dateEmission: new Date().toISOString().split('T')[0],
-                  budget: 'Budget de Fonctionnement',
-                  exercice: new Date().getFullYear(),
-                  rubrique: 'Alimentation générale',
-                  referenceMarcheCadre: selectedMarche ? `MC-MARCHE-${selectedMarche.id}` : '',
-                  lieuLivraison: 'Internat OFPPT Casablanca',
-                  conditionsGenerales: 'Livraison sous 5 jours. Paiement à 60 jours.',
-                  conditionsParticulieres: 'Produits frais uniquement.',
-                  montantHT: '27650.00',
-                  montantTVA: '5530.00',
-                  montantTTC: '33180.00',
-                  statut: 'En cours',
-                  fournisseur_id: selectedMarche ? selectedMarche.id_fournisseur.toString() : ''
-                });
-                setShowBcModal(true);
-              }} 
-              className="btn-primary" 
-              style={{ padding: '8px 16px', display: 'flex', alignItems: 'center', gap: '8px' }}
-            >
-              <Plus size={15} /> Nouveau BC
-            </button>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button
+                onClick={() => {
+                  setEditingBc(null);
+                  let nextNum = 1;
+                  if (bcs.length > 0) {
+                    let maxNum = 0;
+                    bcs.forEach(bc => {
+                      if (bc && bc.numeroBC) {
+                        const match = bc.numeroBC.match(/PA\s+(\d+)\//i);
+                        if (match && match[1]) {
+                          const num = parseInt(match[1]);
+                          if (num > maxNum) maxNum = num;
+                        } else {
+                          const fallbackMatch = bc.numeroBC.match(/-00(\d+)$/);
+                          if (fallbackMatch && fallbackMatch[1]) {
+                            const num = parseInt(fallbackMatch[1]);
+                            if (num > maxNum) maxNum = num;
+                          }
+                        }
+                      }
+                    });
+                    if (maxNum > 0) {
+                      nextNum = maxNum + 1;
+                    } else {
+                      nextNum = bcs.length + 1;
+                    }
+                  }
+
+                  setNewBcData({
+                    numeroBC: `B.C PA ${nextNum}/${new Date().getFullYear()}`,
+                    dateEmission: new Date().toISOString().split('T')[0],
+                    budget: 'BF',
+                    exercice: new Date().getFullYear(),
+                    rubrique: 'ACHAT PRODUITS ALIMENTAIRES',
+                    referenceMarcheCadre: selectedMarche ? `N° 07 E/${new Date().getFullYear()}` : '',
+                    lieuLivraison: 'Ouarzazate',
+                    conditionsGenerales: 'Nous vous prions de bien vouloir exécuter la présente commande aux conditions ci-après.',
+                    conditionsParticulieres: '',
+                    montantHT: '0.00',
+                    montantTVA: '0.00',
+                    montantTTC: '0.00',
+                    statut: 'En cours',
+                    fournisseur_id: selectedMarche ? selectedMarche.id_fournisseur.toString() : '',
+                    items: []
+                  });
+                  setShowBcModal(true);
+                }}
+                className="btn-primary"
+                style={{ padding: '8px 16px', display: 'flex', alignItems: 'center', gap: '8px' }}
+              >
+                <Plus size={15} /> Nouveau BC
+              </button>
+            </div>
           </div>
 
           {/* Simple Beautiful Table */}
@@ -226,7 +923,7 @@ const MarchesContent = () => {
                     <th style={{ padding: '12px 8px', fontSize: '11px', fontWeight: '700', color: '#64748b', width: '120px' }}>DATE D'ÉMISSION</th>
                     <th style={{ padding: '12px 8px', fontSize: '11px', fontWeight: '700', color: '#64748b', width: '130px', textAlign: 'right' }}>MONTANT TTC</th>
                     <th style={{ padding: '12px 8px', fontSize: '11px', fontWeight: '700', color: '#64748b', width: '110px', textAlign: 'center' }}>STATUT</th>
-                    <th style={{ padding: '12px 8px', fontSize: '11px', fontWeight: '700', color: '#64748b', width: '130px', textAlign: 'center' }}>ACTIONS</th>
+                    <th style={{ padding: '12px 8px', fontSize: '11px', fontWeight: '700', color: '#64748b', width: '340px', textAlign: 'center' }}>ACTIONS</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -256,17 +953,192 @@ const MarchesContent = () => {
                           {bc.montantTTC ? parseFloat(bc.montantTTC).toLocaleString('fr-FR', { minimumFractionDigits: 2 }) : '0.00'} MAD
                         </td>
                         <td style={{ padding: '14px 8px', textAlign: 'center' }}>
-                          <span style={{ 
-                            backgroundColor: bc.statut === 'Validé' || bc.statut === 'Livré' ? '#ecfdf5' : '#fef3c7', 
-                            color: bc.statut === 'Validé' || bc.statut === 'Livré' ? '#0f766e' : '#d97706', 
-                            padding: '3px 8px', borderRadius: '12px', fontSize: '10px', fontWeight: '700' 
+                          <span style={{
+                            backgroundColor: bc.statut === 'Validé' || bc.statut === 'Livré' ? '#ecfdf5' : '#fef3c7',
+                            color: bc.statut === 'Validé' || bc.statut === 'Livré' ? '#0f766e' : '#d97706',
+                            padding: '3px 8px', borderRadius: '12px', fontSize: '10px', fontWeight: '700'
                           }}>
                             {bc.statut || 'En cours'}
                           </span>
                         </td>
+                        <td style={{ padding: '14px 8px', display: 'flex', gap: '6px', justifyContent: 'center', alignItems: 'center' }}>
+                          <button
+                            onClick={() => setSelectedBcForView(bc)}
+                            title="Voir"
+                            style={{
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              width: '28px', height: '28px', borderRadius: '6px', border: '1px solid #cbd5e1',
+                              backgroundColor: '#f8fafc', color: '#64748b', cursor: 'pointer', transition: 'all 0.2s'
+                            }}
+                            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#e2e8f0'; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#f8fafc'; }}
+                          >
+                            <Eye size={14} />
+                          </button>
+                          <button
+                            onClick={() => {
+                              setEditingBc(bc);
+                              setNewBcData({
+                                numeroBC: bc.numeroBC,
+                                dateEmission: bc.dateEmission,
+                                budget: bc.budget || 'Budget de Fonctionnement',
+                                exercice: bc.exercice || new Date().getFullYear(),
+                                rubrique: bc.rubrique || 'ACHAT PRODUITS ALIMENTAIRES',
+                                referenceMarcheCadre: bc.referenceMarcheCadre || '',
+                                lieuLivraison: bc.lieuLivraison || 'Internat OFPPT Casablanca',
+                                conditionsGenerales: bc.conditionsGenerales || 'Nous vous prions de bien vouloir exécuter la présente commande aux conditions ci-après.',
+                                conditionsParticulieres: bc.conditionsParticulieres || '',
+                                montantHT: bc.montantHT || '0.00',
+                                montantTVA: bc.montantTVA || '0.00',
+                                montantTTC: bc.montantTTC || '0.00',
+                                statut: bc.statut || 'En cours',
+                                fournisseur_id: bc.fournisseur_id ? bc.fournisseur_id.toString() : '',
+                                items: Array.isArray(bc.items) ? bc.items : []
+                              });
+                              setShowBcModal(true);
+                            }}
+                            title="Modifier"
+                            style={{
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              width: '28px', height: '28px', borderRadius: '6px', border: '1px solid rgba(59,130,246,0.2)',
+                              backgroundColor: '#eff6ff', color: '#3b82f6', cursor: 'pointer', transition: 'all 0.2s'
+                            }}
+                            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#dbeafe'; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#eff6ff'; }}
+                          >
+                            <Edit2 size={14} />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteBc(bc.id)}
+                            title="Supprimer"
+                            style={{
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              width: '28px', height: '28px', borderRadius: '6px', border: '1px solid rgba(239,68,68,0.2)',
+                              backgroundColor: '#fef2f2', color: '#ef4444', cursor: 'pointer', transition: 'all 0.2s'
+                            }}
+                            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#fee2e2'; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#fef2f2'; }}
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                          <button
+                            onClick={() => handleExportBcToExcel(bc)}
+                            title="Exporter Excel"
+                            style={{
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              width: '28px', height: '28px', borderRadius: '6px', border: '1px solid rgba(16,185,129,0.2)',
+                              backgroundColor: '#f0fdf4', color: '#10b981', cursor: 'pointer', transition: 'all 0.2s'
+                            }}
+                            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#dcfce7'; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#f0fdf4'; }}
+                          >
+                            <Download size={14} />
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    if (activeDocTab === 'bl') {
+      const filteredBls = bls.filter(bl => bl.fournisseur_id?.toString() === selectedMarche.id_fournisseur?.toString());
+      return (
+        <div>
+          {/* Header */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+            <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '700', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <FileText size={20} color="#0f766e" /> Bons de livraison
+            </h3>
+            <button
+              onClick={() => {
+                setEditingBl(null);
+                setNewBlData({
+                  numeroBL: `BL-${new Date().getFullYear()}-00${bls.length + 1}`,
+                  dateLivraison: new Date().toISOString().split('T')[0],
+                  exercice: new Date().getFullYear(),
+                  rubrique: 'Alimentation générale',
+                  referenceBCs: [],
+                  lieuLivraison: 'Internat OFPPT Casablanca',
+                  conditionsGenerales: 'Livraison sous 5 jours. Paiement à 60 jours.',
+                  conditionsParticulieres: '',
+                  montantHT: '0.00',
+                  montantTVA: '0.00',
+                  montantTTC: '0.00',
+                  statut: 'En cours',
+                  fournisseur_id: selectedMarche ? selectedMarche.id_fournisseur.toString() : '',
+                  items: []
+                });
+                setShowBlModal(true);
+              }}
+              className="btn-primary"
+              style={{ padding: '8px 16px', display: 'flex', alignItems: 'center', gap: '8px' }}
+            >
+              <Plus size={15} /> Nouveau BL
+            </button>
+          </div>
+
+          {/* Simple Beautiful Table */}
+          <div style={{
+            border: '1px solid #e2e8f0', borderRadius: '12px', overflow: 'hidden',
+            boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)'
+          }}>
+            <div style={{ padding: '24px', fontFamily: "'Inter', sans-serif" }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ borderBottom: '2px solid #cbd5e1', textAlign: 'left' }}>
+                    <th style={{ padding: '12px 8px', fontSize: '11px', fontWeight: '700', color: '#64748b', width: '40px' }}>#</th>
+                    <th style={{ padding: '12px 8px', fontSize: '11px', fontWeight: '700', color: '#64748b' }}>RUBRIQUE / NOM</th>
+                    <th style={{ padding: '12px 8px', fontSize: '11px', fontWeight: '700', color: '#64748b', width: '140px' }}>N° DE BL</th>
+                    <th style={{ padding: '12px 8px', fontSize: '11px', fontWeight: '700', color: '#64748b', width: '120px' }}>DATE DE LIVRAISON</th>
+                    <th style={{ padding: '12px 8px', fontSize: '11px', fontWeight: '700', color: '#64748b', width: '130px', textAlign: 'right' }}>MONTANT TTC</th>
+                    <th style={{ padding: '12px 8px', fontSize: '11px', fontWeight: '700', color: '#64748b', width: '110px', textAlign: 'center' }}>STATUT</th>
+                    <th style={{ padding: '12px 8px', fontSize: '11px', fontWeight: '700', color: '#64748b', width: '130px', textAlign: 'center' }}>ACTIONS</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredBls.length === 0 ? (
+                    <tr>
+                      <td colSpan="7" style={{ padding: '24px', textAlign: 'center', color: '#64748b', fontSize: '14px' }}>
+                        Aucun bon de livraison trouvé. Cliquez sur "Nouveau BL" pour en ajouter un.
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredBls.map((bl, idx) => (
+                      <tr key={bl.id || idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                        <td style={{ padding: '14px 8px', fontSize: '12px', color: '#64748b' }}>{idx + 1}</td>
+                        <td style={{ padding: '14px 8px', fontSize: '13px', fontWeight: '600', color: '#0f172a' }}>
+                          <div>{bl.rubrique || 'N/A'}</div>
+                          <div style={{ fontSize: '10px', color: '#64748b', fontWeight: 'normal', marginTop: '2px' }}>BCs: {bl.referenceBCs?.join(', ') || '—'}</div>
+                        </td>
+                        <td style={{ padding: '14px 8px', fontSize: '12px', fontWeight: '700', color: '#0f766e' }}>
+                          <span style={{ backgroundColor: '#ecfdf5', color: '#0f766e', padding: '4px 8px', borderRadius: '6px', fontSize: '11px' }}>
+                            {bl.numeroBL}
+                          </span>
+                        </td>
+                        <td style={{ padding: '14px 8px', fontSize: '12px', color: '#475569' }}>
+                          {new Date(bl.dateLivraison).toLocaleDateString('fr-FR')}
+                        </td>
+                        <td style={{ padding: '14px 8px', fontSize: '13px', fontWeight: '700', color: '#0f172a', textAlign: 'right' }}>
+                          {parseFloat(bl.montantTTC || 0).toLocaleString('fr-FR', { minimumFractionDigits: 2 })} MAD
+                        </td>
+                        <td style={{ padding: '14px 8px', textAlign: 'center' }}>
+                          <span style={{
+                            backgroundColor: bl.statut === 'Validé' ? '#ecfdf5' : '#fef3c7',
+                            color: bl.statut === 'Validé' ? '#0f766e' : '#d97706',
+                            padding: '3px 8px', borderRadius: '12px', fontSize: '10px', fontWeight: '700'
+                          }}>
+                            {bl.statut || 'En cours'}
+                          </span>
+                        </td>
                         <td style={{ padding: '14px 8px', display: 'flex', gap: '8px', justifyContent: 'center', alignItems: 'center' }}>
-                          <button 
-                            onClick={() => setSelectedBcForView(bc)} 
+                          <button
+                            onClick={() => setSelectedBlForView(bl)}
                             title="Voir"
                             style={{
                               width: '32px', height: '32px',
@@ -290,52 +1162,8 @@ const MarchesContent = () => {
                           >
                             <Eye size={16} />
                           </button>
-                          <button 
-                            onClick={() => {
-                              setEditingBc(bc);
-                              setNewBcData({
-                                numeroBC: bc.numeroBC,
-                                dateEmission: bc.dateEmission,
-                                budget: bc.budget || '',
-                                exercice: bc.exercice || '',
-                                rubrique: bc.rubrique || '',
-                                referenceMarcheCadre: bc.referenceMarcheCadre || '',
-                                lieuLivraison: bc.lieuLivraison || '',
-                                conditionsGenerales: bc.conditionsGenerales || '',
-                                conditionsParticulieres: bc.conditionsParticulieres || '',
-                                montantHT: bc.montantHT || '',
-                                montantTVA: bc.montantTVA || '',
-                                montantTTC: bc.montantTTC || '',
-                                statut: bc.statut || 'En cours',
-                                fournisseur_id: bc.fournisseur_id ? bc.fournisseur_id.toString() : ''
-                              });
-                              setShowBcModal(true);
-                            }} 
-                            title="Modifier"
-                            style={{
-                              width: '32px', height: '32px',
-                              borderRadius: '8px',
-                              border: '1px solid rgba(59, 130, 246, 0.18)',
-                              backgroundColor: 'rgba(59, 130, 246, 0.05)',
-                              color: '#3b82f6',
-                              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                              cursor: 'pointer',
-                              transition: 'all 0.2s ease',
-                              outline: 'none',
-                            }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.backgroundColor = '#3b82f6';
-                              e.currentTarget.style.color = '#ffffff';
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.backgroundColor = 'rgba(59, 130, 246, 0.05)';
-                              e.currentTarget.style.color = '#3b82f6';
-                            }}
-                          >
-                            <Edit2 size={15} />
-                          </button>
-                          <button 
-                            onClick={() => handleDeleteBc(bc.id)} 
+                          <button
+                            onClick={() => handleDeleteBl(bl.id)}
                             title="Supprimer"
                             style={{
                               width: '32px', height: '32px',
@@ -371,6 +1199,7 @@ const MarchesContent = () => {
       );
     }
 
+
     // Elegant fallback for other document tabs
     return (
       <div style={{ padding: '40px 20px', textAlign: 'center' }}>
@@ -387,13 +1216,13 @@ const MarchesContent = () => {
 
   const renderMarcheDetail = () => {
     const sName = fournisseurs.find(f => f.id === selectedMarche.id_fournisseur)?.raisonSociale || 'DISMA Maroc';
-    
+
     return (
       <div style={{ fontFamily: "'Inter', sans-serif" }}>
-        
+
         {/* Navigation sub-header */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px' }}>
-          <button 
+          <button
             onClick={() => setSelectedMarche(null)}
             className="btn-back"
           >
@@ -406,8 +1235,8 @@ const MarchesContent = () => {
         </div>
 
         {/* Header summary panel */}
-        <div style={{ 
-          backgroundColor: 'white', borderRadius: '16px', border: '1px solid #e2e8f0', 
+        <div style={{
+          backgroundColor: 'white', borderRadius: '16px', border: '1px solid #e2e8f0',
           padding: '24px', marginBottom: '24px'
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
@@ -416,9 +1245,9 @@ const MarchesContent = () => {
                 <h2 style={{ margin: 0, fontSize: '22px', fontWeight: '800', color: '#0f172a' }}>
                   {selectedMarche.titulaire}
                 </h2>
-                <span style={{ 
-                  backgroundColor: '#ecfdf5', color: '#10b981', padding: '4px 10px', 
-                  borderRadius: '12px', fontSize: '12px', fontWeight: '700' 
+                <span style={{
+                  backgroundColor: '#ecfdf5', color: '#10b981', padding: '4px 10px',
+                  borderRadius: '12px', fontSize: '12px', fontWeight: '700'
                 }}>
                   {selectedMarche.statut || 'Actif'}
                 </span>
@@ -427,7 +1256,7 @@ const MarchesContent = () => {
                 Marché N° M-2024-089 · {sName} · Ouvert le {new Date(selectedMarche.date_debut).toLocaleDateString('fr-FR')}
               </p>
             </div>
-            
+
             <div style={{ display: 'flex', gap: '10px' }}>
               <button className="btn-secondary">
                 <Printer size={15} /> Imprimer
@@ -439,9 +1268,9 @@ const MarchesContent = () => {
           </div>
 
           {/* Header details stats row */}
-          <div style={{ 
-            display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '20px', 
-            borderTop: '1px solid #f1f5f9', paddingTop: '20px' 
+          <div style={{
+            display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '20px',
+            borderTop: '1px solid #f1f5f9', paddingTop: '20px'
           }}>
             <div>
               <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '600', textTransform: 'uppercase', marginBottom: '4px' }}>Fournisseur</div>
@@ -474,10 +1303,10 @@ const MarchesContent = () => {
 
         {/* Main panels */}
         <div style={{ display: 'grid', gridTemplateColumns: '260px 1fr', gap: '24px', alignItems: 'stretch' }}>
-          
+
           {/* Left panel */}
-          <div style={{ 
-            backgroundColor: 'white', borderRadius: '16px', border: '1px solid #e2e8f0', 
+          <div style={{
+            backgroundColor: 'white', borderRadius: '16px', border: '1px solid #e2e8f0',
             padding: '20px', display: 'flex', flexDirection: 'column', gap: '8px'
           }}>
             <h3 style={{ margin: '0 0 16px 0', fontSize: '11px', fontWeight: '700', color: '#64748b', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
@@ -487,7 +1316,6 @@ const MarchesContent = () => {
               { id: 'bc', label: 'Bon de commande' },
               { id: 'bl', label: 'Bon de livraison' },
               { id: 'pv', label: 'PV de réception' },
-              { id: 'facture', label: 'Facture' },
               { id: 'attachments', label: 'Attachements' },
               { id: 'technical', label: 'Fiche technique' },
               { id: 'stock', label: 'Mouvement stock' }
@@ -507,8 +1335,8 @@ const MarchesContent = () => {
           </div>
 
           {/* Right panel */}
-          <div style={{ 
-            backgroundColor: 'white', borderRadius: '16px', border: '1px solid #e2e8f0', 
+          <div style={{
+            backgroundColor: 'white', borderRadius: '16px', border: '1px solid #e2e8f0',
             padding: '32px'
           }}>
             {renderDocumentContent()}
@@ -521,7 +1349,7 @@ const MarchesContent = () => {
   };
 
   const getStatusColor = (status) => {
-    switch(status) {
+    switch (status) {
       case 'Actif': return { text: '#10b981', bg: 'rgba(16,185,129,0.1)' };
       case 'En cours': return { text: '#f59e0b', bg: 'rgba(245,158,11,0.1)' };
       case 'Retard': return { text: '#ef4444', bg: 'rgba(239,68,68,0.1)' };
@@ -529,6 +1357,12 @@ const MarchesContent = () => {
       default: return { text: '#64748b', bg: 'rgba(100,116,139,0.1)' };
     }
   };
+
+  const filteredSuggestions = productSearch.trim() === '' ? [] : bordereauItems.filter(item => {
+    const q = productSearch.toLowerCase();
+    return (item.price_number && item.price_number.toString().toLowerCase().includes(q)) ||
+      (item.service_description && item.service_description.toLowerCase().includes(q));
+  });
 
   return (
     <div style={{ padding: '32px', maxWidth: '1200px', margin: '0 auto' }}>
@@ -680,179 +1514,179 @@ const MarchesContent = () => {
           transform: translateX(-3px);
         }
       `}</style>
-      
+
       {selectedMarche ? (
         renderMarcheDetail()
       ) : (
         <>
           {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-        <div>
-          <h1 style={{ fontSize: '24px', fontWeight: '700', color: '#0f172a', margin: '0 0 8px 0' }}>Marchés publics</h1>
-          <p style={{ color: '#64748b', fontSize: '13px', margin: 0 }}>Gérez vos marchés, commandes et documents associés</p>
-        </div>
-        <div style={{ display: 'flex', gap: '12px' }}>
-          <button className="btn-secondary">
-            <Filter size={16} /> Filtres
-          </button>
-          <button 
-            onClick={() => setShowModal(true)}
-            className="btn-primary"
-          >
-            <Plus size={16} /> Ajouter marché
-          </button>
-        </div>
-      </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+            <div>
+              <h1 style={{ fontSize: '24px', fontWeight: '700', color: '#0f172a', margin: '0 0 8px 0' }}>Marchés publics</h1>
+              <p style={{ color: '#64748b', fontSize: '13px', margin: 0 }}>Gérez vos marchés, commandes et documents associés</p>
+            </div>
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button className="btn-secondary">
+                <Filter size={16} /> Filtres
+              </button>
+              <button
+                onClick={() => setShowModal(true)}
+                className="btn-primary"
+              >
+                <Plus size={16} /> Ajouter marché
+              </button>
+            </div>
+          </div>
 
-      {/* Stats */}
-      <div style={{ display: 'flex', gap: '20px', marginBottom: '32px' }}>
-        {[
-          { label: 'Total marchés', value: marches.length || 0, color: '#0f172a' },
-          { label: 'Actifs', value: marches.filter(m => m.statut === 'Actif').length || 0, color: '#10b981' },
-          { label: 'En cours', value: marches.filter(m => m.statut === 'En cours').length || 0, color: '#f59e0b' },
-          { label: 'Budget total (MAD)', value: (marches.reduce((sum, m) => sum + parseFloat(m.budget || 0), 0) / 1000).toFixed(0) + 'K', color: '#3b82f6' }
-        ].map((stat, i) => {
-          const classes = ['stat-card-dark', 'stat-card-green', 'stat-card-orange', 'stat-card-blue'];
-          return (
-            <div key={i} 
-              className={`stat-card ${classes[i]}`}
-              style={{ 
-                flex: 1, backgroundColor: 'white', padding: '20px', borderRadius: '12px', 
-                border: '1px solid #e2e8f0', textAlign: 'center', boxShadow: '0 1px 2px rgba(0,0,0,0.02)' 
+          {/* Stats */}
+          <div style={{ display: 'flex', gap: '20px', marginBottom: '32px' }}>
+            {[
+              { label: 'Total marchés', value: marches.length || 0, color: '#0f172a' },
+              { label: 'Actifs', value: marches.filter(m => m.statut === 'Actif').length || 0, color: '#10b981' },
+              { label: 'En cours', value: marches.filter(m => m.statut === 'En cours').length || 0, color: '#f59e0b' },
+              { label: 'Budget total (MAD)', value: (marches.reduce((sum, m) => sum + parseFloat(m.budget || 0), 0) / 1000).toFixed(0) + 'K', color: '#3b82f6' }
+            ].map((stat, i) => {
+              const classes = ['stat-card-dark', 'stat-card-green', 'stat-card-orange', 'stat-card-blue'];
+              return (
+                <div key={i}
+                  className={`stat-card ${classes[i]}`}
+                  style={{
+                    flex: 1, backgroundColor: 'white', padding: '20px', borderRadius: '12px',
+                    border: '1px solid #e2e8f0', textAlign: 'center', boxShadow: '0 1px 2px rgba(0,0,0,0.02)'
+                  }}
+                >
+                  <div style={{ fontSize: '28px', fontWeight: '700', color: stat.color, marginBottom: '4px' }}>{stat.value}</div>
+                  <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '600', textTransform: 'uppercase' }}>{stat.label}</div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Grid of Marches */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' }}>
+
+            {loading ? (
+              <p>Chargement des marchés...</p>
+            ) : (
+              marches.map((marche) => {
+                const statusStyle = getStatusColor(marche.statut);
+                return (
+                  <div key={marche.id} style={{
+                    backgroundColor: 'white', borderRadius: '16px', padding: '20px',
+                    border: '1px solid #e2e8f0', boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                      <span style={{ fontSize: '12px', fontWeight: '600', color: '#64748b' }}>M-{new Date(marche.date_debut).getFullYear()}-00{marche.id}</span>
+                      <span style={{ backgroundColor: statusStyle.bg, color: statusStyle.text, padding: '4px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: '700' }}>
+                        {marche.statut}
+                      </span>
+                    </div>
+
+                    <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', fontWeight: '700', color: '#0f172a' }}>{marche.titulaire}</h3>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '20px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                        <span style={{ color: '#64748b', display: 'flex', alignItems: 'center', gap: '6px' }}><Folder size={14} /> Fournisseur</span>
+                        <span style={{ fontWeight: '600', color: '#334155' }}>
+                          {fournisseurs.find(f => f.id === marche.id_fournisseur)?.raisonSociale || 'DISMA Maroc'}
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                        <span style={{ color: '#64748b', display: 'flex', alignItems: 'center', gap: '6px' }}><DollarSign size={14} /> Budget alloué</span>
+                        <span style={{ fontWeight: '600', color: '#334155' }}>{parseFloat(marche.budget).toLocaleString()} MAD</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                        <span style={{ color: '#64748b', display: 'flex', alignItems: 'center', gap: '6px' }}><Calendar size={14} /> Échéance</span>
+                        <span style={{ fontWeight: '600', color: '#334155' }}>{new Date(marche.date_fin).toLocaleDateString('fr-FR')}</span>
+                      </div>
+                    </div>
+
+                    <div style={{ marginBottom: '20px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', fontWeight: '600', marginBottom: '6px' }}>
+                        <span style={{ color: '#64748b' }}>Consommé</span>
+                        <span style={{ color: '#0f766e' }}>{marche.consomme}%</span>
+                      </div>
+                      <div style={{ width: '100%', height: '6px', backgroundColor: '#e2e8f0', borderRadius: '3px', overflow: 'hidden' }}>
+                        <div style={{ width: `${marche.consomme}%`, height: '100%', backgroundColor: '#0f766e', borderRadius: '3px' }}></div>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '12px' }}>
+                      <button className="btn-secondary" style={{ flex: 1, padding: '8px', justifyContent: 'center' }}>
+                        <Archive size={14} /> Archive
+                      </button>
+                      <button
+                        onClick={() => setSelectedMarche(marche)}
+                        className="btn-primary"
+                        style={{ flex: 1, padding: '8px', justifyContent: 'center' }}
+                      >
+                        <FolderOpen size={14} /> Ouvrir
+                      </button>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+
+            {/* Add New Card Button */}
+            <div
+              onClick={() => setShowModal(true)}
+              style={{
+                borderRadius: '16px', border: '2px dashed #cbd5e1', display: 'flex', flexDirection: 'column',
+                alignItems: 'center', justifyContent: 'center', minHeight: '260px', cursor: 'pointer',
+                backgroundColor: 'rgba(248,250,252,0.5)', transition: 'all 0.2s'
               }}
             >
-              <div style={{ fontSize: '28px', fontWeight: '700', color: stat.color, marginBottom: '4px' }}>{stat.value}</div>
-              <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '600', textTransform: 'uppercase' }}>{stat.label}</div>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Grid of Marches */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' }}>
-        
-        {loading ? (
-          <p>Chargement des marchés...</p>
-        ) : (
-          marches.map((marche) => {
-            const statusStyle = getStatusColor(marche.statut);
-            return (
-              <div key={marche.id} style={{ 
-                backgroundColor: 'white', borderRadius: '16px', padding: '20px', 
-                border: '1px solid #e2e8f0', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' 
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                  <span style={{ fontSize: '12px', fontWeight: '600', color: '#64748b' }}>M-{new Date(marche.date_debut).getFullYear()}-00{marche.id}</span>
-                  <span style={{ backgroundColor: statusStyle.bg, color: statusStyle.text, padding: '4px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: '700' }}>
-                    {marche.statut}
-                  </span>
-                </div>
-                
-                <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', fontWeight: '700', color: '#0f172a' }}>{marche.titulaire}</h3>
-                
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '20px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
-                    <span style={{ color: '#64748b', display: 'flex', alignItems: 'center', gap: '6px' }}><Folder size={14} /> Fournisseur</span>
-                    <span style={{ fontWeight: '600', color: '#334155' }}>
-                      {fournisseurs.find(f => f.id === marche.id_fournisseur)?.raisonSociale || 'DISMA Maroc'}
-                    </span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
-                    <span style={{ color: '#64748b', display: 'flex', alignItems: 'center', gap: '6px' }}><DollarSign size={14} /> Budget alloué</span>
-                    <span style={{ fontWeight: '600', color: '#334155' }}>{parseFloat(marche.budget).toLocaleString()} MAD</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
-                    <span style={{ color: '#64748b', display: 'flex', alignItems: 'center', gap: '6px' }}><Calendar size={14} /> Échéance</span>
-                    <span style={{ fontWeight: '600', color: '#334155' }}>{new Date(marche.date_fin).toLocaleDateString('fr-FR')}</span>
-                  </div>
-                </div>
-
-                <div style={{ marginBottom: '20px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', fontWeight: '600', marginBottom: '6px' }}>
-                    <span style={{ color: '#64748b' }}>Consommé</span>
-                    <span style={{ color: '#0f766e' }}>{marche.consomme}%</span>
-                  </div>
-                  <div style={{ width: '100%', height: '6px', backgroundColor: '#e2e8f0', borderRadius: '3px', overflow: 'hidden' }}>
-                    <div style={{ width: `${marche.consomme}%`, height: '100%', backgroundColor: '#0f766e', borderRadius: '3px' }}></div>
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', gap: '12px' }}>
-                  <button className="btn-secondary" style={{ flex: 1, padding: '8px', justifyContent: 'center' }}>
-                    <Archive size={14} /> Archive
-                  </button>
-                  <button 
-                    onClick={() => setSelectedMarche(marche)}
-                    className="btn-primary"
-                    style={{ flex: 1, padding: '8px', justifyContent: 'center' }}
-                  >
-                    <FolderOpen size={14} /> Ouvrir
-                  </button>
-                </div>
+              <div style={{ width: '48px', height: '48px', backgroundColor: '#e2e8f0', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '12px' }}>
+                <Plus size={24} color="#64748b" />
               </div>
-            );
-          })
-        )}
+              <div style={{ fontSize: '14px', fontWeight: '600', color: '#475569' }}>Nouveau marché</div>
+            </div>
 
-        {/* Add New Card Button */}
-        <div 
-          onClick={() => setShowModal(true)}
-          style={{ 
-            borderRadius: '16px', border: '2px dashed #cbd5e1', display: 'flex', flexDirection: 'column', 
-            alignItems: 'center', justifyContent: 'center', minHeight: '260px', cursor: 'pointer',
-            backgroundColor: 'rgba(248,250,252,0.5)', transition: 'all 0.2s'
-          }}
-        >
-          <div style={{ width: '48px', height: '48px', backgroundColor: '#e2e8f0', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '12px' }}>
-            <Plus size={24} color="#64748b" />
           </div>
-          <div style={{ fontSize: '14px', fontWeight: '600', color: '#475569' }}>Nouveau marché</div>
-        </div>
 
-      </div>
-
-      </>
+        </>
       )}
 
       {/* Modal Add Marche */}
       {showModal && (
         <div style={{
-          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, 
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
           backgroundColor: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(4px)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50
         }}>
-          <div style={{ 
-            backgroundColor: 'white', borderRadius: '16px', width: '100%', maxWidth: '500px', 
-            padding: '32px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' 
+          <div style={{
+            backgroundColor: 'white', borderRadius: '16px', width: '100%', maxWidth: '500px',
+            padding: '32px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)'
           }}>
             <h2 style={{ margin: '0 0 24px 0', fontSize: '20px', color: '#0f172a' }}>Ajouter un nouveau marché</h2>
-            
+
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div>
                 <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#475569', marginBottom: '6px' }}>Titulaire du marché</label>
-                <input 
+                <input
                   type="text" name="titulaire" value={formData.titulaire} onChange={handleInputChange} required
                   style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none' }}
                   placeholder="Ex: Denrées alimentaires"
                 />
               </div>
-              
+
               <div>
                 <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#475569', marginBottom: '6px' }}>Fournisseur *</label>
-                <select 
-                  name="id_fournisseur" 
-                  value={formData.id_fournisseur} 
-                  onChange={handleInputChange} 
+                <select
+                  name="id_fournisseur"
+                  value={formData.id_fournisseur}
+                  onChange={handleInputChange}
                   required
-                  style={{ 
-                    width: '100%', 
-                    padding: '10px 12px', 
-                    borderRadius: '8px', 
-                    border: '1px solid #cbd5e1', 
-                    outline: 'none', 
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    borderRadius: '8px',
+                    border: '1px solid #cbd5e1',
+                    outline: 'none',
                     backgroundColor: 'white',
                     fontSize: '14px',
-                    color: '#334155' 
+                    color: '#334155'
                   }}
                 >
                   <option value="" disabled>-- Sélectionner un fournisseur --</option>
@@ -867,14 +1701,14 @@ const MarchesContent = () => {
               <div style={{ display: 'flex', gap: '16px' }}>
                 <div style={{ flex: 1 }}>
                   <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#475569', marginBottom: '6px' }}>Date de début</label>
-                  <input 
+                  <input
                     type="date" name="date_debut" value={formData.date_debut} onChange={handleInputChange} required
                     style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none' }}
                   />
                 </div>
                 <div style={{ flex: 1 }}>
                   <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#475569', marginBottom: '6px' }}>Date de fin</label>
-                  <input 
+                  <input
                     type="date" name="date_fin" value={formData.date_fin} onChange={handleInputChange} required
                     style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none' }}
                   />
@@ -882,14 +1716,14 @@ const MarchesContent = () => {
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '16px' }}>
-                <button 
+                <button
                   type="button" onClick={() => setShowModal(false)}
                   className="btn-secondary"
                   style={{ padding: '10px 20px' }}
                 >
                   Annuler
                 </button>
-                <button 
+                <button
                   type="submit" disabled={submitting}
                   className="btn-primary"
                   style={{ padding: '10px 20px' }}
@@ -901,111 +1735,117 @@ const MarchesContent = () => {
           </div>
         </div>
       )}
-      {/* Modal Add/Edit BC */}
       {showBcModal && (
         <div style={{
-          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, 
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
           backgroundColor: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(4px)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50
         }}>
-          <div style={{ 
-            backgroundColor: 'white', borderRadius: '16px', width: '100%', maxWidth: '600px', 
-            padding: '32px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' 
+          <div style={{
+            backgroundColor: 'white', borderRadius: '16px', width: '95%', maxWidth: '1000px',
+            padding: '24px 32px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)',
+            maxHeight: '90vh', display: 'flex', flexDirection: 'column'
           }}>
-            <h2 style={{ margin: '0 0 24px 0', fontSize: '20px', fontWeight: '700', color: '#0f172a' }}>
-              {editingBc ? 'Modifier le Bon de commande' : 'Ajouter un Bon de commande'}
-            </h2>
-            
-            <form onSubmit={handleSaveBc} style={{ display: 'flex', flexDirection: 'column', gap: '24px', maxHeight: '75vh', overflowY: 'auto', paddingRight: '4px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
+              <h2 style={{ margin: 0, fontSize: '20px', fontWeight: '700', color: '#0f172a' }}>
+                {editingBc ? 'Modifier le Bon de commande' : 'Ajouter un Bon de commande'}
+              </h2>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowBcModal(false);
+                  setEditingBc(null);
+                }}
+                style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%', transition: 'background-color 0.2s' }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f1f5f9'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveBc} style={{ display: 'flex', flexDirection: 'column', gap: '24px', overflowY: 'auto', flex: 1, paddingRight: '12px' }}>
+              {/* General Information Grid */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#475569', marginBottom: '6px' }}>Numéro du BC *</label>
-                  <input 
-                    type="text" 
-                    value={newBcData.numeroBC} 
-                    onChange={(e) => setNewBcData({ ...newBcData, numeroBC: e.target.value })} 
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>Numéro du BC *</label>
+                  <input
+                    type="text"
+                    value={newBcData.numeroBC}
+                    onChange={(e) => setNewBcData({ ...newBcData, numeroBC: e.target.value })}
                     required
-                    style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '13px', color: '#334155' }}
+                    style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '13px', color: '#334155' }}
                     placeholder="Ex: BC-2024-089-001"
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#475569', marginBottom: '6px' }}>Date d'émission *</label>
-                  <input 
-                    type="date" 
-                    value={newBcData.dateEmission} 
-                    onChange={(e) => setNewBcData({ ...newBcData, dateEmission: e.target.value })} 
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>Date d'émission *</label>
+                  <input
+                    type="date"
+                    value={newBcData.dateEmission}
+                    onChange={(e) => setNewBcData({ ...newBcData, dateEmission: e.target.value })}
                     required
-                    style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '13px', color: '#334155' }}
+                    style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '13px', color: '#334155' }}
                   />
                 </div>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '24px' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#475569', marginBottom: '6px' }}>Rubrique / Nom *</label>
-                  <input 
-                    type="text" 
-                    value={newBcData.rubrique} 
-                    onChange={(e) => setNewBcData({ ...newBcData, rubrique: e.target.value })} 
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>Rubrique / Nom *</label>
+                  <input
+                    type="text"
+                    value={newBcData.rubrique}
+                    onChange={(e) => setNewBcData({ ...newBcData, rubrique: e.target.value })}
                     required
-                    style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '13px', color: '#334155' }}
+                    style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '13px', color: '#334155' }}
                     placeholder="Alimentation générale"
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#475569', marginBottom: '6px' }}>Exercice *</label>
-                  <input 
-                    type="number" 
-                    value={newBcData.exercice} 
-                    onChange={(e) => setNewBcData({ ...newBcData, exercice: e.target.value })} 
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>Exercice *</label>
+                  <input
+                    type="number"
+                    value={newBcData.exercice}
+                    onChange={(e) => setNewBcData({ ...newBcData, exercice: e.target.value })}
                     required
-                    style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '13px', color: '#334155' }}
+                    style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '13px', color: '#334155' }}
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#475569', marginBottom: '6px' }}>Budget *</label>
-                  <select 
-                    value={newBcData.budget} 
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>Budget *</label>
+                  <select
+                    value={newBcData.budget}
                     onChange={(e) => setNewBcData({ ...newBcData, budget: e.target.value })}
-                    style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '13px', color: '#334155', backgroundColor: 'white' }}
+                    style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '13px', color: '#334155', backgroundColor: 'white' }}
                   >
                     <option value="Budget de Fonctionnement">Fonctionnement</option>
                     <option value="Budget d'Investissement">Investissement</option>
                   </select>
                 </div>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#475569', marginBottom: '6px' }}>Réf. Marché Cadre</label>
-                  <input 
-                    type="text" 
-                    value={newBcData.referenceMarcheCadre} 
-                    onChange={(e) => setNewBcData({ ...newBcData, referenceMarcheCadre: e.target.value })} 
-                    style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '13px', color: '#334155' }}
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>Réf. Marché Cadre</label>
+                  <input
+                    type="text"
+                    value={newBcData.referenceMarcheCadre}
+                    onChange={(e) => setNewBcData({ ...newBcData, referenceMarcheCadre: e.target.value })}
+                    style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '13px', color: '#334155' }}
                     placeholder="MC-2023-01"
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#475569', marginBottom: '6px' }}>Lieu de Livraison</label>
-                  <input 
-                    type="text" 
-                    value={newBcData.lieuLivraison} 
-                    onChange={(e) => setNewBcData({ ...newBcData, lieuLivraison: e.target.value })} 
-                    style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '13px', color: '#334155' }}
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>Lieu de Livraison</label>
+                  <input
+                    type="text"
+                    value={newBcData.lieuLivraison}
+                    onChange={(e) => setNewBcData({ ...newBcData, lieuLivraison: e.target.value })}
+                    style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '13px', color: '#334155' }}
                   />
                 </div>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#475569', marginBottom: '6px' }}>Fournisseur *</label>
-                  <select 
-                    value={newBcData.fournisseur_id} 
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>Fournisseur *</label>
+                  <select
+                    value={newBcData.fournisseur_id}
                     onChange={(e) => setNewBcData({ ...newBcData, fournisseur_id: e.target.value })}
                     required
-                    style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '13px', color: '#334155', backgroundColor: 'white' }}
+                    style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '13px', color: '#334155', backgroundColor: 'white' }}
                   >
                     <option value="">-- Choisir un fournisseur --</option>
                     {fournisseurs.map(f => (
@@ -1014,11 +1854,11 @@ const MarchesContent = () => {
                   </select>
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#475569', marginBottom: '6px' }}>Statut *</label>
-                  <select 
-                    value={newBcData.statut} 
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>Statut *</label>
+                  <select
+                    value={newBcData.statut}
                     onChange={(e) => setNewBcData({ ...newBcData, statut: e.target.value })}
-                    style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '13px', color: '#334155', backgroundColor: 'white' }}
+                    style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '13px', color: '#334155', backgroundColor: 'white' }}
                   >
                     <option value="En cours">En cours</option>
                     <option value="Validé">Validé</option>
@@ -1027,78 +1867,203 @@ const MarchesContent = () => {
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '24px' }}>
+              {/* Added Products Table */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <label style={{ display: 'block', fontSize: '14px', fontWeight: '700', color: '#0f172a' }}>
+                  Articles du Bon de commande ({newBcData.items?.length || 0})
+                </label>
+                <div style={{ border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden', paddingBottom: '120px' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+                    <thead>
+                      <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0', textAlign: 'left' }}>
+                        <th style={{ padding: '10px 12px', fontWeight: '700', color: '#64748b' }}>N&deg;</th>
+                        <th style={{ padding: '10px 12px', fontWeight: '700', color: '#64748b' }}>D&eacute;signation</th>
+                        <th style={{ padding: '10px 12px', fontWeight: '700', color: '#64748b', textAlign: 'center', width: '80px' }}>Qt&eacute;</th>
+                        <th style={{ padding: '10px 12px', fontWeight: '700', color: '#64748b', textAlign: 'center', width: '100px' }}>P.U HT</th>
+                        <th style={{ padding: '10px 12px', fontWeight: '700', color: '#64748b', textAlign: 'center', width: '80px' }}>TVA (%)</th>
+                        <th style={{ padding: '10px 12px', fontWeight: '700', color: '#64748b', textAlign: 'right', width: '100px' }}>Total HT</th>
+                        <th style={{ padding: '10px 12px', textAlign: 'center', width: '50px' }}></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(!newBcData.items || newBcData.items.length === 0) ? (
+                        <tr>
+                          <td colSpan="7" style={{ padding: '24px', textAlign: 'center', color: '#94a3b8', fontStyle: 'italic' }}>
+                            Aucun produit ajout&eacute; pour le moment.
+                          </td>
+                        </tr>
+                      ) : (
+                        newBcData.items.map((item, index) => {
+                          const totalLineHt = (parseFloat(item.qty) || 0) * (parseFloat(item.unit_price_ht) || 0);
+                          return (
+                            <tr key={index} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                              <td style={{ padding: '10px 12px', fontWeight: '700', color: '#0f766e' }}>{item.price_number}</td>
+                              <td style={{ padding: '10px 12px', color: '#334155' }}>
+                                <div style={{ fontWeight: '600' }}>{item.service_description}</div>
+                                <div style={{ fontSize: '10px', color: '#94a3b8' }}>Unit&eacute;: {item.unit_of_measure}</div>
+                              </td>
+                              <td style={{ padding: '10px 12px', textAlign: 'center' }}>
+                                <input
+                                  type="number" min="1"
+                                  value={item.qty}
+                                  onChange={(e) => handleUpdateItem(index, 'qty', e.target.value)}
+                                  style={{ width: '60px', padding: '4px', textAlign: 'center', borderRadius: '4px', border: '1px solid #cbd5e1', outline: 'none' }}
+                                />
+                              </td>
+                              <td style={{ padding: '10px 12px', textAlign: 'center' }}>
+                                <input
+                                  type="number" step="0.01"
+                                  value={item.unit_price_ht}
+                                  onChange={(e) => handleUpdateItem(index, 'unit_price_ht', e.target.value)}
+                                  style={{ width: '80px', padding: '4px', textAlign: 'center', borderRadius: '4px', border: '1px solid #cbd5e1', outline: 'none' }}
+                                />
+                              </td>
+                              <td style={{ padding: '10px 12px', textAlign: 'center' }}>
+                                <select
+                                  value={item.vat_rate}
+                                  onChange={(e) => handleUpdateItem(index, 'vat_rate', e.target.value)}
+                                  style={{ width: '60px', padding: '4px', borderRadius: '4px', border: '1px solid #cbd5e1', outline: 'none', backgroundColor: 'white' }}
+                                >
+                                  <option value={0}>0%</option>
+                                  <option value={9}>9%</option>
+                                  <option value={10}>10%</option>
+                                  <option value={20}>20%</option>
+                                </select>
+                              </td>
+                              <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: '700', color: '#334155' }}>{totalLineHt.toFixed(2)}</td>
+                              <td style={{ padding: '10px 12px', textAlign: 'center' }}>
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveProductFromBc(index)}
+                                  style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: 0 }}
+                                >
+                                  <Trash2 size={16} />
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                    <tfoot>
+                      <tr style={{ backgroundColor: '#f8fafc' }}>
+                        <td colSpan="7" style={{ padding: '12px' }}>
+                          <div style={{ position: 'relative' }}>
+                            <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+                            <input
+                              type="text"
+                              value={productSearch}
+                              onChange={(e) => {
+                                setProductSearch(e.target.value);
+                                setShowSuggestions(true);
+                              }}
+                              onFocus={() => setShowSuggestions(true)}
+                              placeholder="Ajouter un article : Saisissez le N° ou la désignation du produit..."
+                              style={{ width: '100%', padding: '10px 12px 10px 36px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '13px', color: '#334155' }}
+                            />
+                            {showSuggestions && filteredSuggestions.length > 0 && (
+                              <div style={{
+                                position: 'absolute', top: '100%', left: 0, right: 0,
+                                backgroundColor: 'white', border: '1px solid #cbd5e1', borderRadius: '8px',
+                                boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', zIndex: 100, maxHeight: '220px', overflowY: 'auto',
+                                marginTop: '4px'
+                              }}>
+                                {filteredSuggestions.map((item) => (
+                                  <div
+                                    key={item.id}
+                                    onClick={() => handleDirectProductAdd(item)}
+                                    style={{ padding: '10px 16px', cursor: 'pointer', borderBottom: '1px solid #f1f5f9', fontSize: '13px', display: 'flex', justifyContent: 'space-between', transition: 'background-color 0.2s' }}
+                                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#f1f5f9'; }}
+                                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+                                  >
+                                    <span style={{ fontWeight: '700', color: '#0f766e', minWidth: '80px' }}>N&deg; {item.price_number}</span>
+                                    <span style={{ flex: 1, marginLeft: '12px', color: '#334155' }}>{item.service_description}</span>
+                                    <span style={{ color: '#64748b', fontSize: '12px', minWidth: '150px', textAlign: 'right' }}>
+                                      {item.unit_of_measure} | {parseFloat(item.unit_price_ht).toFixed(2)} MAD
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              </div>
+
+              {/* Totals */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px', backgroundColor: '#f8fafc', padding: '16px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#475569', marginBottom: '6px' }}>Montant HT (MAD) *</label>
-                  <input 
-                    type="number" step="0.01"
-                    value={newBcData.montantHT} 
-                    onChange={(e) => {
-                      const ht = parseFloat(e.target.value) || 0;
-                      const tva = ht * 0.20;
-                      const ttc = ht + tva;
-                      setNewBcData({ 
-                        ...newBcData, 
-                        montantHT: e.target.value,
-                        montantTVA: tva.toFixed(2),
-                        montantTTC: ttc.toFixed(2)
-                      });
-                    }} 
-                    required
-                    style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '13px', color: '#334155' }}
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>Montant HT</label>
+                  <input
+                    type="text" readOnly disabled
+                    value={`${newBcData.montantHT} MAD`}
+                    style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '13px', color: '#64748b', backgroundColor: '#e2e8f0' }}
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#475569', marginBottom: '6px' }}>Montant TVA (20%)</label>
-                  <input 
-                    type="number" step="0.01" readOnly disabled
-                    value={newBcData.montantTVA} 
-                    style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '13px', color: '#94a3b8', backgroundColor: '#f8fafc' }}
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>Montant TVA</label>
+                  <input
+                    type="text" readOnly disabled
+                    value={`${newBcData.montantTVA} MAD`}
+                    style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '13px', color: '#64748b', backgroundColor: '#e2e8f0' }}
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#475569', marginBottom: '6px' }}>Montant TTC</label>
-                  <input 
-                    type="number" step="0.01" readOnly disabled
-                    value={newBcData.montantTTC} 
-                    style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '13px', color: '#0f766e', backgroundColor: '#f0fdf4', fontWeight: '700' }}
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>Montant TTC</label>
+                  <input
+                    type="text" readOnly disabled
+                    value={`${newBcData.montantTTC} MAD`}
+                    style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '14px', color: '#0f766e', backgroundColor: '#ecfdf5', fontWeight: '800' }}
                   />
                 </div>
               </div>
 
-              <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#475569', marginBottom: '6px' }}>Conditions Générales</label>
-                <textarea 
-                  value={newBcData.conditionsGenerales} 
-                  onChange={(e) => setNewBcData({ ...newBcData, conditionsGenerales: e.target.value })} 
-                  style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '13px', color: '#334155', minHeight: '60px' }}
-                />
+              {/* Conditions */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>Conditions Générales</label>
+                  <textarea
+                    value={newBcData.conditionsGenerales}
+                    onChange={(e) => setNewBcData({ ...newBcData, conditionsGenerales: e.target.value })}
+                    style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '13px', color: '#334155', minHeight: '60px' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>Conditions Particulières</label>
+                  <textarea
+                    value={newBcData.conditionsParticulieres}
+                    onChange={(e) => setNewBcData({ ...newBcData, conditionsParticulieres: e.target.value })}
+                    style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '13px', color: '#334155', minHeight: '60px' }}
+                  />
+                </div>
               </div>
 
-              <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#475569', marginBottom: '6px' }}>Conditions Particulières</label>
-                <textarea 
-                  value={newBcData.conditionsParticulieres} 
-                  onChange={(e) => setNewBcData({ ...newBcData, conditionsParticulieres: e.target.value })} 
-                  style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '13px', color: '#334155', minHeight: '60px' }}
-                />
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '16px', borderTop: '1px solid #cbd5e1', paddingTop: '16px' }}>
-                <button 
-                  type="button" 
-                  onClick={() => setShowBcModal(false)}
-                  className="btn-secondary"
-                  style={{ padding: '10px 20px' }}
+              {/* Form Action Buttons */}
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '8px', borderTop: '1px solid #e2e8f0', paddingTop: '16px' }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowBcModal(false);
+                    setEditingBc(null);
+                  }}
+                  style={{
+                    padding: '10px 20px', borderRadius: '8px', border: '1px solid #cbd5e1',
+                    backgroundColor: 'white', color: '#475569', fontWeight: '600', cursor: 'pointer', fontSize: '14px'
+                  }}
                 >
                   Annuler
                 </button>
-                <button 
+                <button
                   type="submit"
-                  className="btn-primary"
-                  style={{ padding: '10px 20px', backgroundColor: '#0f766e', border: 'none', borderRadius: '8px', color: 'white', fontWeight: '600' }}
+                  style={{
+                    padding: '10px 24px', borderRadius: '8px', border: 'none',
+                    backgroundColor: '#0f766e', color: 'white', fontWeight: '600', cursor: 'pointer', fontSize: '14px'
+                  }}
                 >
-                  {editingBc ? 'Enregistrer' : 'Ajouter'}
+                  {editingBc ? 'Enregistrer les modifications' : 'Ajouter le Bon de commande'}
                 </button>
               </div>
             </form>
@@ -1109,12 +2074,12 @@ const MarchesContent = () => {
       {/* Modal View BC details */}
       {selectedBcForView && (
         <div style={{
-          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, 
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
           backgroundColor: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(4px)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50
         }}>
-          <div style={{ 
-            backgroundColor: 'white', borderRadius: '16px', width: '100%', maxWidth: '700px', 
+          <div style={{
+            backgroundColor: 'white', borderRadius: '16px', width: '100%', maxWidth: '700px',
             padding: '32px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)',
             maxHeight: '90vh', overflowY: 'auto'
           }}>
@@ -1127,7 +2092,7 @@ const MarchesContent = () => {
                   {selectedBcForView.rubrique || 'Bon de Commande'}
                 </h2>
               </div>
-              <button 
+              <button
                 onClick={() => setSelectedBcForView(null)}
                 style={{ background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer', color: '#64748b', lineHeight: 1 }}
               >
@@ -1231,8 +2196,8 @@ const MarchesContent = () => {
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '24px', borderTop: '1px solid #e2e8f0', paddingTop: '16px' }}>
-              <button 
-                type="button" 
+              <button
+                type="button"
                 onClick={() => setSelectedBcForView(null)}
                 className="btn-primary"
                 style={{ padding: '10px 20px', backgroundColor: '#0f766e', border: 'none', borderRadius: '8px', color: 'white', fontWeight: '600' }}
