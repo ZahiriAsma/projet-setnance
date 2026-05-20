@@ -1,0 +1,36 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class BonLivraison extends Model
+{
+    use HasFactory;
+
+    protected $table = 'bons_livraison';
+
+    protected $fillable = [
+        'numero_bl',
+        'date_bl',
+        'fournisseur',
+        'fournisseur_id',
+        'reference_bc',
+        'client',
+        'total_ht',
+        'total_tva',
+        'total_ttc',
+        'items',
+        'statut'
+    ];
+
+    protected $casts = [
+        'items' => 'array'
+    ];
+
+    public function fournisseurModel()
+    {
+        return $this->belongsTo(Fournisseur::class, 'fournisseur_id');
+    }
+}

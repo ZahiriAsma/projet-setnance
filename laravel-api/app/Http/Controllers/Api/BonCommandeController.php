@@ -234,10 +234,10 @@ class BonCommandeController extends Controller
         $currentRow = 13;
         foreach ($items as $item) {
             $sheet->setCellValue('A' . $currentRow, $item['price_number'] ?? '');
-            $sheet->setCellValue('B' . $currentRow, $item['service_description'] ?? '');
-            $sheet->setCellValue('C' . $currentRow, $item['unit_of_measure'] ?? '');
-            $sheet->setCellValue('D' . $currentRow, $item['qty'] ?? 0);
-            $sheet->setCellValue('E' . $currentRow, $item['unit_price_ht'] ?? 0);
+            $sheet->setCellValue('B' . $currentRow, $item['service_description'] ?? ($item['designation'] ?? ($item['label'] ?? '')));
+            $sheet->setCellValue('C' . $currentRow, $item['unit_of_measure'] ?? ($item['unit'] ?? 'Unité'));
+            $sheet->setCellValue('D' . $currentRow, $item['qty'] ?? ($item['quantity'] ?? 0));
+            $sheet->setCellValue('E' . $currentRow, $item['unit_price_ht'] ?? ($item['price'] ?? ($item['unit_price'] ?? ($item['pu'] ?? 0))));
             
             // Format VAT rate as numeric percentage
             $vatRate = isset($item['vat_rate']) ? (float)str_replace('%', '', $item['vat_rate']) : 20;
@@ -335,14 +335,13 @@ class BonCommandeController extends Controller
 
         // Create Writer & Output stream
         $writer = new Xlsx($spreadsheet);
-        
         $filename = 'Bon_de_Commande_' . str_replace('/', '_', $bc->numeroBC) . '.xlsx';
-        
-        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        header('Content-Disposition: attachment; filename="' . urlencode($filename) . '"');
-        header('Cache-Control: max-age=0');
 
-        $writer->save('php://output');
-        exit;
+        return response()->streamDownload(function () use ($writer) {
+            $writer->save('php://output');
+        }, $filename, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Cache-Control' => 'max-age=0',
+        ]);
     }
 }
