@@ -85,9 +85,14 @@ class DailyMenuSeeder extends Seeder
             ],
         ];
 
-        // Année scolaire 2025-2026 : un enregistrement par date calendaire
-        $cursor = Carbon::parse('2025-09-01');
-        $end = Carbon::parse('2026-06-30');
+        // Calcul dynamique de l'année scolaire courante
+        // Si on est avant septembre, l'année scolaire a commencé l'année précédente
+        $now = Carbon::now();
+        $startYear = $now->month >= 9 ? $now->year : $now->year - 1;
+        $endYear   = $startYear + 1;
+
+        $cursor = Carbon::parse("{$startYear}-09-01");
+        $end    = Carbon::parse("{$endYear}-06-30");
 
         while ($cursor->lte($end)) {
             $template = $weeklyTemplates[$cursor->dayOfWeekIso - 1];
