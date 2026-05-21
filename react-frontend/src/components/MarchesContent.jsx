@@ -2406,44 +2406,44 @@ const MarchesContent = () => {
             <form onSubmit={handleSaveBl} style={{ display: 'flex', flexDirection: 'column', gap: '20px', overflowY: 'auto', flex: 1, paddingRight: '12px' }}>
               
               {/* Form Grid */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
-                <div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px', marginBottom: '8px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>Numéro du BL *</label>
                   <input
                     type="text"
                     value={newBlData.numeroBL}
                     onChange={(e) => setNewBlData({ ...newBlData, numeroBL: e.target.value })}
                     required
-                    style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '13px', color: '#334155' }}
+                    style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '13px', color: '#334155', boxSizing: 'border-box' }}
                     placeholder="Ex: BL-2024-001"
                   />
                 </div>
-                <div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>Date de Livraison *</label>
                   <input
                     type="date"
                     value={newBlData.dateLivraison}
                     onChange={(e) => setNewBlData({ ...newBlData, dateLivraison: e.target.value })}
                     required
-                    style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '13px', color: '#334155' }}
+                    style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '13px', color: '#334155', boxSizing: 'border-box' }}
                   />
                 </div>
-                <div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>Fournisseur</label>
                   <input
                     type="text"
                     value={fournisseurs.find(f => f.id.toString() === selectedMarche?.id_fournisseur?.toString())?.raisonSociale || 'Chargement...'}
                     disabled
-                    style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #e2e8f0', backgroundColor: '#f8fafc', outline: 'none', fontSize: '13px', color: '#64748b' }}
+                    style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid #e2e8f0', backgroundColor: '#f8fafc', outline: 'none', fontSize: '13px', color: '#64748b', boxSizing: 'border-box' }}
                   />
                 </div>
-                <div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>Client / Établissement</label>
                   <input
                     type="text"
                     value={newBlData.lieuLivraison}
                     onChange={(e) => setNewBlData({ ...newBlData, lieuLivraison: e.target.value })}
-                    style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '13px', color: '#334155' }}
+                    style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '13px', color: '#334155', boxSizing: 'border-box' }}
                   />
                 </div>
               </div>
@@ -3030,28 +3030,6 @@ const MarchesContent = () => {
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '24px', borderTop: '1px solid #e2e8f0', paddingTop: '16px' }}>
-              <button
-                type="button"
-                onClick={() => handleExportBcToExcel(selectedBcForView)}
-                className="btn-secondary"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  padding: '10px 20px',
-                  backgroundColor: '#f0fdf4',
-                  border: '1px solid rgba(16, 185, 129, 0.2)',
-                  borderRadius: '8px',
-                  color: '#10b981',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s'
-                }}
-                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#dcfce7'; }}
-                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#f0fdf4'; }}
-              >
-                <Download size={16} /> Exporter Excel
-              </button>
               <button
                 type="button"
                 onClick={() => setSelectedBcForView(null)}
