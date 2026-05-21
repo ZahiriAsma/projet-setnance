@@ -24,6 +24,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('menus', \App\Http\Controllers\Api\DailyMenuController::class);
     Route::get('/bon-commandes/{id}/export', [\App\Http\Controllers\Api\BonCommandeController::class, 'export']);
     Route::apiResource('bon-commandes', \App\Http\Controllers\Api\BonCommandeController::class);
+    Route::get('/bons-livraison/{id}/export', [\App\Http\Controllers\Api\BonLivraisonController::class, 'export']);
+    Route::apiResource('bons-livraison', \App\Http\Controllers\Api\BonLivraisonController::class);
 
     // Bordereau routes
     Route::get('/bordereau', [\App\Http\Controllers\Api\BordereauController::class, 'index']);

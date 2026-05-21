@@ -1,10 +1,54 @@
 import React, { useState, useEffect } from 'react';
 import {
   Plus, Filter, Folder, Calendar, DollarSign, Archive, FolderOpen,
-  ChevronLeft, FileText, Printer, Download, Edit2, Trash2, Eye, Search, X
+  ChevronLeft, FileText, Printer, Download, Edit2, Trash2, Eye, Search, X, Check, ChevronDown
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import api from '../api/axios';
+
+const calculateVatBreakdown = (items) => {
+  let totalHt = 0;
+  let baseHt9 = 0;
+  let baseHt10 = 0;
+  let baseHt20 = 0;
+
+  (items || []).forEach(item => {
+    const qty = parseFloat(item.qty ?? (item.quantity ?? 0));
+    const pu = parseFloat(item.unit_price_ht ?? (item.price ?? (item.pu ?? (item.unit_price ?? 0))));
+    const lineHt = qty * pu;
+    const vatRate = parseFloat(item.vat_rate !== undefined ? item.vat_rate : 20);
+
+    totalHt += lineHt;
+    if (vatRate === 9) {
+      baseHt9 += lineHt;
+    } else if (vatRate === 10) {
+      baseHt10 += lineHt;
+    } else if (vatRate === 20) {
+      baseHt20 += lineHt;
+    } else {
+      // Default to 20% or group other rates
+      baseHt20 += lineHt;
+    }
+  });
+
+  const tva9 = baseHt9 * 0.09;
+  const tva10 = baseHt10 * 0.10;
+  const tva20 = baseHt20 * 0.20;
+  const totalTva = tva9 + tva10 + tva20;
+  const totalTtc = totalHt + totalTva;
+
+  return {
+    totalHt,
+    baseHt9,
+    baseHt10,
+    baseHt20,
+    tva9,
+    tva10,
+    tva20,
+    totalTva,
+    totalTtc
+  };
+};
 
 const MarchesContent = () => {
   const [marches, setMarches] = useState([]);
@@ -46,51 +90,13 @@ const MarchesContent = () => {
   const [bordereauItems, setBordereauItems] = useState([]);
 
   // Dynamic state for Bons de livraison documents
-
-  const [bls, setBls] = useState([
-    {
-      id: 101,
-      numeroBL: 'BL-2024-001',
-      dateLivraison: '2024-05-10',
-      rubrique: 'ACHAT PRODUITS ALIMENTAIRES',
-      exercice: 2024,
-      referenceBCs: ['BC-2024-089-001'],
-      lieuLivraison: 'Casablanca',
-      fournisseur_id: '1',
-      items: [
-        { price_number: '1', service_description: 'Huile de table 5L', unit_of_measure: 'Carton', qty: 10, unit_price_ht: 180, vat_rate: 20 },
-        { price_number: '2', service_description: 'Sucre en poudre 50kg', unit_of_measure: 'Sac', qty: 5, unit_price_ht: 350, vat_rate: 20 }
-      ],
-      montantHT: '3550.00',
-      montantTVA: '710.00',
-      montantTTC: '4260.00',
-      statut: 'Validé'
-    },
-    {
-      id: 102,
-      numeroBL: 'BL-2024-002',
-      dateLivraison: '2024-05-12',
-      rubrique: 'ACHAT PRODUITS ALIMENTAIRES',
-      exercice: 2024,
-      referenceBCs: ['BC-2024-089-002'],
-      lieuLivraison: 'Casablanca',
-      fournisseur_id: '1',
-      items: [
-        { price_number: '3', service_description: 'Riz long grain 25kg', unit_of_measure: 'Sac', qty: 8, unit_price_ht: 280, vat_rate: 20 },
-        { price_number: '1', service_description: 'Huile de table 5L', unit_of_measure: 'Carton', qty: 15, unit_price_ht: 180, vat_rate: 20 }
-      ],
-      montantHT: '4940.00',
-      montantTVA: '988.00',
-      montantTTC: '5928.00',
-      statut: 'Validé'
-    }
-  ]);
+  const [bls, setBls] = useState([]);
   const [showBlModal, setShowBlModal] = useState(false);
   const [newBlData, setNewBlData] = useState({
     numeroBL: '',
     dateLivraison: new Date().toISOString().split('T')[0],
     exercice: new Date().getFullYear(),
-    rubrique: 'Alimentation générale',
+    rubrique: 'ACHAT PRODUITS ALIMENTAIRES',
     referenceBCs: [],
     lieuLivraison: 'Internat OFPPT Casablanca',
     conditionsGenerales: 'Livraison sous 5 jours. Paiement à 60 jours.',
@@ -125,6 +131,56 @@ const MarchesContent = () => {
   const [editingFacture, setEditingFacture] = useState(null);
   const [selectedFactureForView, setSelectedFactureForView] = useState(null);
 
+  const normalizeBlItems = (items) => {
+    let itemsArray = [];
+    if (items) {
+      if (Array.isArray(items)) {
+        itemsArray = items;
+      } else if (typeof items === 'string') {
+        try {
+          let parsed = JSON.parse(items);
+          if (typeof parsed === 'string') {
+            parsed = JSON.parse(parsed);
+          }
+          if (Array.isArray(parsed)) {
+            itemsArray = parsed;
+          }
+        } catch (e) {
+          console.error("Failed to parse BL items:", e);
+        }
+      }
+    }
+    return itemsArray.map(item => {
+      const price = parseFloat(item.unit_price_ht ?? (item.price ?? (item.pu ?? (item.unit_price ?? 0))));
+      return {
+        ...item,
+        unit_price_ht: price,
+        price: price,
+        pu: price,
+        unit_price: price,
+        qty: parseFloat(item.qty ?? (item.quantity ?? 0)),
+        quantity: parseFloat(item.qty ?? (item.quantity ?? 0))
+      };
+    });
+  };
+
+  // Mappers back-and-forth for unified backend <-> frontend integration
+  const mapBlFromApi = (bl) => ({
+    id: bl.id,
+    numeroBL: bl.numero_bl,
+    dateLivraison: bl.date_bl,
+    rubrique: bl.items?.[0]?.rubrique || 'ACHAT PRODUITS ALIMENTAIRES',
+    exercice: new Date(bl.date_bl).getFullYear(),
+    referenceBCs: bl.reference_bc ? bl.reference_bc.split(', ') : [],
+    lieuLivraison: bl.client || 'Internat OFPPT Casablanca',
+    fournisseur_id: bl.fournisseur_id?.toString() || '',
+    items: normalizeBlItems(bl.items),
+    montantHT: bl.total_ht,
+    montantTVA: bl.total_tva,
+    montantTTC: bl.total_ttc,
+    statut: bl.statut
+  });
+
 
   // Dynamic state for Bon de commande items (used when viewing a BC)
   const [bcItems, setBcItems] = useState([
@@ -140,7 +196,18 @@ const MarchesContent = () => {
     fetchBcs();
     fetchFactures();
     fetchBordereauItems();
+    fetchBls();
   }, []);
+
+  const fetchBls = async () => {
+    try {
+      const response = await api.get('/bons-livraison');
+      const mapped = response.data.map(mapBlFromApi);
+      setBls(mapped);
+    } catch (error) {
+      console.error('Erreur lors du chargement des bons de livraison', error);
+    }
+  };
 
   const fetchBordereauItems = async () => {
     try {
@@ -178,10 +245,48 @@ const MarchesContent = () => {
     }
   };
 
+  const normalizeBc = (bc) => {
+    let itemsArray = [];
+    if (bc && bc.items) {
+      if (Array.isArray(bc.items)) {
+        itemsArray = bc.items;
+      } else if (typeof bc.items === 'string') {
+        try {
+          let parsed = JSON.parse(bc.items);
+          if (typeof parsed === 'string') {
+            parsed = JSON.parse(parsed);
+          }
+          if (Array.isArray(parsed)) {
+            itemsArray = parsed;
+          }
+        } catch (e) {
+          console.error("Failed to parse items for BC ID:", bc.id, e);
+        }
+      }
+    }
+    const normalizedItems = itemsArray.map(item => {
+      const price = parseFloat(item.unit_price_ht ?? (item.price ?? (item.pu ?? (item.unit_price ?? 0))));
+      return {
+        ...item,
+        unit_price_ht: price,
+        price: price,
+        pu: price,
+        unit_price: price,
+        qty: parseFloat(item.qty ?? (item.quantity ?? 0)),
+        quantity: parseFloat(item.qty ?? (item.quantity ?? 0))
+      };
+    });
+    return {
+      ...bc,
+      items: normalizedItems
+    };
+  };
+
+
   const fetchBcs = async () => {
     try {
       const response = await api.get('/bon-commandes');
-      setBcs(response.data);
+      setBcs(response.data.map(normalizeBc));
     } catch (error) {
       console.error('Erreur lors du chargement des bons de commande', error);
     }
@@ -269,7 +374,11 @@ const MarchesContent = () => {
       service_description: selectedBordereauItem.service_description,
       unit_of_measure: selectedBordereauItem.unit_of_measure,
       qty: qty,
+      quantity: qty,
       unit_price_ht: price,
+      price: price,
+      pu: price,
+      unit_price: price,
       vat_rate: parseFloat(tempVat) || 20
     };
 
@@ -302,12 +411,17 @@ const MarchesContent = () => {
       return;
     }
 
+    const price = parseFloat(item.unit_price_ht) || 0;
     const newItem = {
       price_number: item.price_number,
       service_description: item.service_description,
       unit_of_measure: item.unit_of_measure,
       qty: 1,
-      unit_price_ht: parseFloat(item.unit_price_ht) || 0,
+      quantity: 1,
+      unit_price_ht: price,
+      price: price,
+      pu: price,
+      unit_price: price,
       vat_rate: parseFloat(item.vat_rate) || 20
     };
 
@@ -319,7 +433,20 @@ const MarchesContent = () => {
 
   const handleUpdateItem = (index, field, value) => {
     const updatedItems = [...(newBcData.items || [])];
-    updatedItems[index] = { ...updatedItems[index], [field]: parseFloat(value) || 0 };
+    const parsedVal = parseFloat(value) || 0;
+    const updatedItem = { ...updatedItems[index], [field]: parsedVal };
+
+    if (field === 'qty' || field === 'quantity') {
+      updatedItem.qty = parsedVal;
+      updatedItem.quantity = parsedVal;
+    } else if (field === 'unit_price_ht' || field === 'price' || field === 'pu' || field === 'unit_price') {
+      updatedItem.unit_price_ht = parsedVal;
+      updatedItem.price = parsedVal;
+      updatedItem.pu = parsedVal;
+      updatedItem.unit_price = parsedVal;
+    }
+
+    updatedItems[index] = updatedItem;
     recalculateBcTotals(updatedItems);
   };
 
@@ -339,12 +466,12 @@ const MarchesContent = () => {
       if (editingBc) {
         // Edit mode in database
         const response = await api.put(`/bon-commandes/${editingBc.id}`, payload);
-        setBcs(bcs.map(bc => bc.id === editingBc.id ? response.data : bc));
+        setBcs(bcs.map(bc => bc.id === editingBc.id ? normalizeBc(response.data) : bc));
         setEditingBc(null);
       } else {
         // Add mode in database
         const response = await api.post('/bon-commandes', payload);
-        setBcs([...bcs, response.data]);
+        setBcs([...bcs, normalizeBc(response.data)]);
       }
 
       setNewBcData({
@@ -383,224 +510,45 @@ const MarchesContent = () => {
     }
   };
 
-  const handleExportBcToExcel = (bc) => {
-    const filename = `Bon_de_Commande_${bc.numeroBC || 'Nouveau'}.xls`;
-    const supplier = fournisseurs.find(f => f.id.toString() === bc.fournisseur_id?.toString()) || {};
-
-    const items = Array.isArray(bc.items) ? bc.items : [];
-
-    let tva9 = 0; let tva10 = 0; let tva20 = 0;
-
-    items.forEach(item => {
-      const qty = parseFloat(item.qty || item.quantity || 0);
-      const price = parseFloat(item.unit_price_ht || item.price || 0);
-      const rate = parseFloat(item.vat_rate || item.tva || 20);
-      const totalHt = qty * price;
-      const tvaAmount = totalHt * (rate / 100);
-      if (rate === 9) tva9 += tvaAmount;
-      else if (rate === 10) tva10 += tvaAmount;
-      else if (rate === 20) tva20 += tvaAmount;
-    });
-
-    const mHT = parseFloat(bc.montantHT || 0);
-    const mTTC = parseFloat(bc.montantTTC || 0);
-
-    // Build a single table with 8 columns to ensure perfect Excel alignment
-    let html = `
-      <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
-      <head>
-        <meta charset="utf-8">
-        <style>
-          body { font-family: 'Arial', sans-serif; font-size: 11px; color: #000; }
-          table { border-collapse: collapse; width: 100%; }
-          td, th { padding: 5px; vertical-align: top; font-size: 11px; }
-          .border-all { border: 1px solid #000; }
-          .bg-grey { background-color: #f0f0f0; }
-          .text-center { text-align: center; }
-          .text-right { text-align: right; }
-          .text-left { text-align: left; }
-          .bold { font-weight: bold; }
-          .title-text { font-size: 16px; font-weight: bold; border: 2px solid #000; padding: 10px; display: inline-block; letter-spacing: 2px; text-align: center; }
-        </style>
-      </head>
-      <body>
-        <table>
-          <!-- Set column widths roughly -->
-          <colgroup>
-            <col width="40">
-            <col width="300">
-            <col width="60">
-            <col width="60">
-            <col width="80">
-            <col width="60">
-            <col width="80">
-            <col width="100">
-          </colgroup>
-
-          <!-- Row 1: Header -->
-          <tr>
-            <td colspan="2" class="bold" style="font-size: 10px;">
-              OFFICE DE LA FORMATION<br>
-              PROFESSIONNELLE<br>
-              ET DE LA PROMOTION DU<br>
-              TRAVAIL<br>
-              <span style="font-weight: normal; text-transform: none;">
-              Direction Régionale Drâa Tafilalet<br>
-              ISBTP QUARTIER EL MATAR<br>
-              ERRACHIDIA<br>
-              Tél : 0535572740
-              </span>
-            </td>
-            <td colspan="4" class="text-center">
-              <span class="title-text">BON DE COMMANDE</span><br><br>
-              <span class="bold">B.C PA &nbsp;&nbsp; ${bc.numeroBC || '—'}</span>
-            </td>
-            <td colspan="2" class="text-right" style="font-size: 10px;">
-              <span class="bold">Références du Fournisseur</span><br>
-              Sté ${supplier.raisonSociale || '—'}<br>
-              ${supplier.adresse || '—'}<br>
-              ERRACHIDIA<br>
-              PATENTE N° : ${supplier.patente || '—'} &nbsp;&nbsp; RC : ${supplier.rc || '—'}<br>
-              Errachidia<br>
-              IF : ${supplier.if || '—'} &nbsp;&nbsp; ICE : ${supplier.ice || '—'}<br>
-              RIB : ${supplier.rib || '—'}
-            </td>
-          </tr>
-          
-          <!-- Spacer -->
-          <tr><td colspan="8"></td></tr>
-
-          <!-- Row: Info 1 -->
-          <tr>
-            <td class="border-all bg-grey bold">Budget</td>
-            <td colspan="3" class="border-all">${bc.budget || 'BF'}</td>
-            <td colspan="2" class="border-all bg-grey bold">Réf. Marché Cadre</td>
-            <td colspan="2" class="border-all">${bc.referenceMarcheCadre || 'N° 07-E/2024'}</td>
-          </tr>
-          <!-- Row: Info 2 -->
-          <tr>
-            <td class="border-all bg-grey bold">Exercice</td>
-            <td colspan="3" class="border-all">${bc.exercice || new Date().getFullYear()}</td>
-            <td colspan="2" class="border-all bg-grey bold">Lieu de livraison</td>
-            <td colspan="2" class="border-all">${bc.lieuLivraison || 'Ouarzazate'}</td>
-          </tr>
-          <!-- Row: Info 3 -->
-          <tr>
-            <td class="border-all bg-grey bold">Rubrique</td>
-            <td colspan="3" class="border-all">${bc.rubrique || 'ACHAT PRODUITS ALIMENTAIRES'}</td>
-            <td colspan="2" class="border-all bg-grey bold">Date de livraison</td>
-            <td colspan="2" class="border-all">${bc.dateEmission || ''}</td>
-          </tr>
-
-          <!-- Spacer -->
-          <tr><td colspan="8"></td></tr>
-
-          <!-- Items Header -->
-          <tr>
-            <td class="border-all bg-grey bold text-center">N°</td>
-            <td class="border-all bg-grey bold text-left">Désignations et références</td>
-            <td class="border-all bg-grey bold text-center">Unité</td>
-            <td class="border-all bg-grey bold text-center">Qté</td>
-            <td class="border-all bg-grey bold text-center">P.U HT</td>
-            <td class="border-all bg-grey bold text-center">Taux TVA</td>
-            <td class="border-all bg-grey bold text-center">TVA</td>
-            <td class="border-all bg-grey bold text-center">Total HT</td>
-          </tr>
-    `;
-
-    items.forEach((item, idx) => {
-      const priceNum = item.price_number || (idx + 1);
-      const designation = item.service_description || item.designation || item.label || '—';
-      const unit = item.unit_of_measure || item.unit || '—';
-      const qty = parseFloat(item.qty || item.quantity || 0);
-      const price = parseFloat(item.unit_price_ht || item.price || 0);
-      const rate = parseFloat(item.vat_rate || item.tva || 20);
-      const totalHt = qty * price;
-      const tvaVal = totalHt * (rate / 100);
-
-      html += `
-          <tr>
-            <td class="border-all text-center">${priceNum}</td>
-            <td class="border-all">${designation}</td>
-            <td class="border-all text-center">${unit}</td>
-            <td class="border-all text-center">${qty}</td>
-            <td class="border-all text-right">${price.toFixed(2).replace('.', ',')}</td>
-            <td class="border-all text-center">${rate}%</td>
-            <td class="border-all text-right">${tvaVal.toFixed(2).replace('.', ',')}</td>
-            <td class="border-all text-right">${totalHt.toFixed(2).replace('.', ',')}</td>
-          </tr>
-      `;
-    });
-
-    const minRows = 8;
-    if (items.length < minRows) {
-      for (let i = items.length; i < minRows; i++) {
-        html += `
-          <tr>
-            <td class="border-all">&nbsp;</td>
-            <td class="border-all">&nbsp;</td>
-            <td class="border-all">&nbsp;</td>
-            <td class="border-all">&nbsp;</td>
-            <td class="border-all">&nbsp;</td>
-            <td class="border-all">&nbsp;</td>
-            <td class="border-all">&nbsp;</td>
-            <td class="border-all">&nbsp;</td>
-          </tr>
-        `;
+  const handleExportBcToExcel = async (bc) => {
+    if (!bc || !bc.id) {
+      alert("Impossible d'exporter un bon de commande sans identifiant.");
+      return;
+    }
+    try {
+      const response = await api.get(`/bon-commandes/${bc.id}/export`, {
+        responseType: 'blob'
+      });
+      const blob = new Blob([response.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      
+      // Clean filename
+      const cleanNum = bc.numeroBC ? bc.numeroBC.replace(/[\/\s]/g, '_') : bc.id;
+      link.setAttribute('download', `Bon_de_Commande_${cleanNum}.xlsx`);
+      
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Erreur lors de l'exportation Excel :", error);
+      if (error.response && error.response.data instanceof Blob) {
+        const reader = new FileReader();
+        reader.onload = () => {
+          try {
+            const errData = JSON.parse(reader.result);
+            alert("Erreur lors de l'exportation : " + (errData.message || "Erreur serveur."));
+          } catch (e) {
+            alert("Une erreur est survenue lors de l'exportation Excel depuis le serveur.");
+          }
+        };
+        reader.readAsText(error.response.data);
+      } else {
+        alert("Une erreur est survenue lors de l'exportation Excel depuis le serveur. " + (error.response?.data?.message || error.message));
       }
     }
-
-    html += `
-          <!-- Totals Area -->
-          <tr>
-            <td colspan="6" rowspan="5" style="vertical-align: bottom; font-style: italic; color: #555;">
-              Nous vous prions de bien vouloir exécuter la présente commande aux conditions ci-après.
-            </td>
-            <td class="border-all bg-grey bold">Total H.T</td>
-            <td class="border-all text-right bold">${mHT.toFixed(2).replace('.', ',')} MAD</td>
-          </tr>
-          <tr>
-            <td class="border-all bg-grey bold">TVA 9%</td>
-            <td class="border-all text-right">${tva9.toFixed(2).replace('.', ',')} MAD</td>
-          </tr>
-          <tr>
-            <td class="border-all bg-grey bold">TVA 10%</td>
-            <td class="border-all text-right">${tva10.toFixed(2).replace('.', ',')} MAD</td>
-          </tr>
-          <tr>
-            <td class="border-all bg-grey bold">TVA 20%</td>
-            <td class="border-all text-right">${tva20.toFixed(2).replace('.', ',')} MAD</td>
-          </tr>
-          <tr>
-            <td class="border-all bg-grey bold" style="font-size: 13px; color: #000;">Total T.T.C</td>
-            <td class="border-all text-right bold" style="font-size: 13px; background-color: #f2f8ff; color: #0055cc;">${mTTC.toFixed(2).replace('.', ',')} MAD</td>
-          </tr>
-          
-          <!-- Spacer -->
-          <tr><td colspan="8">&nbsp;</td></tr>
-
-          <!-- Signatures -->
-          <tr>
-            <td colspan="6"></td>
-            <td colspan="2" class="text-center bold">
-              Errachidia, le ${bc.dateEmission || '—'}<br><br>
-              <span style="text-decoration: underline;">LE SOUS-ORDONNATEUR</span>
-            </td>
-          </tr>
-        </table>
-      </body>
-      </html>
-    `;
-
-    const blob = new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
   };
 
   const handleExportAllBcsToExcel = () => {
@@ -672,126 +620,88 @@ const MarchesContent = () => {
     URL.revokeObjectURL(url);
   };
 
-  const handleExportBlToExcel = (bl) => {
-    const filename = `${bl.numeroBL}.xls`;
-    let html = `
-      <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
-      <head>
-        <meta charset="utf-8">
-        <style>
-          table { border-collapse: collapse; width: 100%; }
-          th, td { border: 1px solid #cbd5e1; padding: 8px; font-family: Arial, sans-serif; font-size: 13px; }
-          th { background-color: #0f766e; color: white; font-weight: bold; }
-          .title { font-size: 18px; font-weight: bold; color: #0f766e; text-align: center; padding-bottom: 20px; }
-          .right { text-align: right; }
-          .center { text-align: center; }
-          .bold { font-weight: bold; }
-        </style>
-      </head>
-      <body>
-        <div class="title">BON DE LIVRAISON : ${bl.numeroBL}</div>
-        
-        <table style="margin-bottom: 20px;">
-          <tr>
-            <td class="bold">Date de livraison:</td>
-            <td>${bl.dateLivraison}</td>
-            <td class="bold">BCs associés:</td>
-            <td>${bl.referenceBCs?.join(', ') || '—'}</td>
-          </tr>
-          <tr>
-            <td class="bold">Rubrique:</td>
-            <td>${bl.rubrique || '—'}</td>
-            <td class="bold">Statut:</td>
-            <td>${bl.statut || 'En cours'}</td>
-          </tr>
-        </table>
-
-        <h3>Liste des articles</h3>
-        <table>
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>Désignation</th>
-              <th>Unité</th>
-              <th class="center">Quantité</th>
-              <th class="right">Prix Unitaire HT (MAD)</th>
-              <th class="right">Montant Total HT (MAD)</th>
-            </tr>
-          </thead>
-          <tbody>
-    `;
-
-    const items = Array.isArray(bl.items) ? bl.items : [];
-    items.forEach((item, idx) => {
-      const designation = item.service_description || item.designation || '—';
-      const unit = item.unit_of_measure || item.unit || '—';
-      const qty = parseFloat(item.qty || 0);
-      const price = parseFloat(item.unit_price_ht || item.price || 0);
-      const total = qty * price;
-      html += `
-        <tr>
-          <td class="center">${idx + 1}</td>
-          <td>${designation}</td>
-          <td class="center">${unit}</td>
-          <td class="center">${qty}</td>
-          <td class="right">${price.toFixed(2)}</td>
-          <td class="right">${total.toFixed(2)}</td>
-        </tr>
-      `;
-    });
-
-    html += `
-          </tbody>
-        </table>
-
-        <table style="margin-top: 20px; float: right; width: 300px;">
-          <tr>
-            <td class="bold">Montant HT:</td>
-            <td class="right">${parseFloat(bl.montantHT || 0).toFixed(2)} MAD</td>
-          </tr>
-          <tr>
-            <td class="bold">Montant TVA (20%):</td>
-            <td class="right">${parseFloat(bl.montantTVA || 0).toFixed(2)} MAD</td>
-          </tr>
-          <tr>
-            <td class="bold">Montant TTC:</td>
-            <td class="right bold" style="color: #0f766e;">${parseFloat(bl.montantTTC || 0).toFixed(2)} MAD</td>
-          </tr>
-        </table>
-      </body>
-      </html>
-    `;
-
-    const blob = new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+  const handleExportBlToExcel = async (bl) => {
+    if (!bl || !bl.id) {
+      alert("Impossible d'exporter un bon de livraison sans identifiant.");
+      return;
+    }
+    try {
+      const response = await api.get(`/bons-livraison/${bl.id}/export`, {
+        responseType: 'blob'
+      });
+      const blob = new Blob([response.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      
+      // Clean filename
+      const cleanNum = bl.numeroBL ? bl.numeroBL.replace(/[\/\s]/g, '_') : bl.id;
+      link.setAttribute('download', `Bon_de_Livraison_${cleanNum}.xlsx`);
+      
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Erreur lors de l'exportation Excel :", error);
+      if (error.response && error.response.data instanceof Blob) {
+        const reader = new FileReader();
+        reader.onload = () => {
+          try {
+            const errData = JSON.parse(reader.result);
+            alert("Erreur lors de l'exportation : " + (errData.message || "Erreur serveur."));
+          } catch (e) {
+            alert("Une erreur est survenue lors de l'exportation Excel depuis le serveur.");
+          }
+        };
+        reader.readAsText(error.response.data);
+      } else {
+        alert("Une erreur est survenue lors de l'exportation Excel depuis le serveur. " + (error.response?.data?.message || error.message));
+      }
+    }
   };
 
   // --- BL Consolidator ---
   useEffect(() => {
     if (!showBlModal) return;
     const selectedBCs = bcs.filter(bc => newBlData.referenceBCs.includes(bc.numeroBC));
+    console.log("Moteur de consolidation déclenché. BCs sélectionnés :", selectedBCs);
 
     // Merge all items from selected BCs, summing quantities for matching price numbers
     const mergedMap = {};
     selectedBCs.forEach(bc => {
-      const bcItems = Array.isArray(bc.items) ? bc.items : [];
+      let bcItems = [];
+      if (bc && bc.items) {
+        if (Array.isArray(bc.items)) {
+          bcItems = bc.items;
+        } else if (typeof bc.items === 'string') {
+          try {
+            let parsed = JSON.parse(bc.items);
+            if (typeof parsed === 'string') {
+              parsed = JSON.parse(parsed);
+            }
+            if (Array.isArray(parsed)) {
+              bcItems = parsed;
+            }
+          } catch (e) {
+            console.error("Erreur de décodage JSON pour les articles du BC:", bc.numeroBC, e);
+          }
+        }
+      }
+
+      console.log(`Le BC ${bc.numeroBC} contient ${bcItems.length} article(s):`, bcItems);
+
       bcItems.forEach(item => {
         const key = item.price_number || item.service_description || item.designation || '';
         if (!key) return;
 
-        const qty = parseFloat(item.qty || item.quantity || 0);
-        const pu = parseFloat(item.unit_price_ht || item.price || 0);
+        const qty = parseFloat(item.qty ?? (item.quantity ?? 0));
+        const pu = parseFloat(item.unit_price_ht ?? (item.price ?? (item.pu ?? (item.unit_price ?? 0))));
         const vatRate = parseFloat(item.vat_rate !== undefined ? item.vat_rate : 20);
 
         if (mergedMap[key]) {
           mergedMap[key].qty += qty;
+          mergedMap[key].quantity += qty;
           if (!mergedMap[key]._bcRefs.includes(bc.numeroBC)) {
             mergedMap[key]._bcRefs.push(bc.numeroBC);
           }
@@ -799,7 +709,11 @@ const MarchesContent = () => {
           mergedMap[key] = {
             ...item,
             qty: qty,
+            quantity: qty,
             unit_price_ht: pu,
+            price: pu,
+            pu: pu,
+            unit_price: pu,
             vat_rate: vatRate,
             _bcRefs: [bc.numeroBC],
           };
@@ -807,25 +721,30 @@ const MarchesContent = () => {
       });
     });
 
-    const merged = Object.values(mergedMap).map(item => ({
-      ...item,
-      _bcRef: item._bcRefs.join(', ')
-    }));
-
-    let ht = 0, tva = 0;
-    merged.forEach(item => {
-      const lineHt = item.qty * item.unit_price_ht;
-      const lineTva = lineHt * (item.vat_rate / 100);
-      ht += lineHt;
-      tva += lineTva;
+    const merged = Object.values(mergedMap).map(item => {
+      const price = parseFloat(item.unit_price_ht ?? (item.price ?? (item.pu ?? (item.unit_price ?? 0))));
+      const q = parseFloat(item.qty ?? (item.quantity ?? 0));
+      return {
+        ...item,
+        unit_price_ht: price,
+        price: price,
+        pu: price,
+        unit_price: price,
+        qty: q,
+        quantity: q,
+        _bcRef: item._bcRefs.join(', ')
+      };
     });
+    console.log("Articles consolidés après fusion :", merged);
+
+    const breakdown = calculateVatBreakdown(merged);
 
     setNewBlData(prev => ({
       ...prev,
       items: merged,
-      montantHT: ht.toFixed(2),
-      montantTVA: tva.toFixed(2),
-      montantTTC: (ht + tva).toFixed(2)
+      montantHT: breakdown.totalHt.toFixed(2),
+      montantTVA: breakdown.totalTva.toFixed(2),
+      montantTTC: breakdown.totalTtc.toFixed(2)
     }));
   }, [newBlData.referenceBCs, showBlModal, bcs]);
 
@@ -841,30 +760,54 @@ const MarchesContent = () => {
     return () => document.removeEventListener('mousedown', handleClick);
   }, [blDropdownOpen]);
 
-  const handleSaveBl = (e) => {
+  const handleSaveBl = async (e) => {
     e.preventDefault();
     if (!newBlData.numeroBL || !newBlData.dateLivraison) {
       alert("Veuillez remplir tous les champs obligatoires.");
       return;
     }
 
-    if (editingBl) {
-      setBls(bls.map(bl => bl.id === editingBl.id ? { ...bl, ...newBlData } : bl));
-      setEditingBl(null);
-    } else {
-      const created = {
-        ...newBlData,
-        id: Date.now(),
-        fournisseur_id: selectedMarche?.id_fournisseur?.toString() || ''
+    try {
+      const payload = {
+        numero_bl: newBlData.numeroBL,
+        date_bl: newBlData.dateLivraison,
+        fournisseur: fournisseurs.find(f => f.id.toString() === selectedMarche?.id_fournisseur?.toString())?.raisonSociale || '',
+        fournisseur_id: selectedMarche?.id_fournisseur || null,
+        reference_bc: Array.isArray(newBlData.referenceBCs) ? newBlData.referenceBCs.join(', ') : '',
+        client: newBlData.lieuLivraison,
+        total_ht: parseFloat(newBlData.montantHT),
+        total_tva: parseFloat(newBlData.montantTVA),
+        total_ttc: parseFloat(newBlData.montantTTC),
+        items: newBlData.items,
+        statut: newBlData.statut
       };
-      setBls([...bls, created]);
+
+      if (editingBl) {
+        const response = await api.put(`/bons-livraison/${editingBl.id}`, payload);
+        const mapped = mapBlFromApi(response.data);
+        setBls(bls.map(bl => bl.id === editingBl.id ? mapped : bl));
+        setEditingBl(null);
+      } else {
+        const response = await api.post('/bons-livraison', payload);
+        const mapped = mapBlFromApi(response.data);
+        setBls([...bls, mapped]);
+      }
+      setShowBlModal(false);
+    } catch (error) {
+      console.error("Erreur lors de la sauvegarde du bon de livraison", error.response || error);
+      alert("Erreur: " + (error.response?.data?.message || error.message));
     }
-    setShowBlModal(false);
   };
 
-  const handleDeleteBl = (id) => {
+  const handleDeleteBl = async (id) => {
     if (window.confirm("Êtes-vous sûr de vouloir supprimer ce bon de livraison ?")) {
-      setBls(bls.filter(bl => bl.id !== id));
+      try {
+        await api.delete(`/bons-livraison/${id}`);
+        setBls(bls.filter(bl => bl.id !== id));
+      } catch (error) {
+        console.error("Erreur lors de la suppression du bon de livraison", error);
+        alert("Erreur: " + (error.response?.data?.message || error.message));
+      }
     }
   };
 
@@ -1286,56 +1229,77 @@ const MarchesContent = () => {
                             {bl.statut || 'En cours'}
                           </span>
                         </td>
-                        <td style={{ padding: '14px 8px', display: 'flex', gap: '8px', justifyContent: 'center', alignItems: 'center' }}>
+                        <td style={{ padding: '14px 8px', display: 'flex', gap: '6px', justifyContent: 'center', alignItems: 'center' }}>
                           <button
                             onClick={() => setSelectedBlForView(bl)}
                             title="Voir"
                             style={{
-                              width: '32px', height: '32px',
-                              borderRadius: '8px',
-                              border: '1px solid rgba(15, 118, 110, 0.18)',
-                              backgroundColor: 'rgba(15, 118, 110, 0.05)',
-                              color: '#0f766e',
-                              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                              cursor: 'pointer',
-                              transition: 'all 0.2s ease',
-                              outline: 'none',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              width: '28px', height: '28px', borderRadius: '6px', border: '1px solid #cbd5e1',
+                              backgroundColor: '#f8fafc', color: '#64748b', cursor: 'pointer', transition: 'all 0.2s'
                             }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.backgroundColor = '#0f766e';
-                              e.currentTarget.style.color = '#ffffff';
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.backgroundColor = 'rgba(15, 118, 110, 0.05)';
-                              e.currentTarget.style.color = '#0f766e';
-                            }}
+                            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#e2e8f0'; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#f8fafc'; }}
                           >
-                            <Eye size={16} />
+                            <Eye size={14} />
+                          </button>
+                          <button
+                            onClick={() => {
+                              setEditingBl(bl);
+                              setNewBlData({
+                                numeroBL: bl.numeroBL,
+                                dateLivraison: bl.dateLivraison,
+                                exercice: bl.exercice || new Date().getFullYear(),
+                                rubrique: bl.rubrique || 'ACHAT PRODUITS ALIMENTAIRES',
+                                referenceBCs: bl.referenceBCs || [],
+                                lieuLivraison: bl.lieuLivraison || 'Internat OFPPT Casablanca',
+                                conditionsGenerales: bl.conditionsGenerales || 'Livraison sous 5 jours. Paiement à 60 jours.',
+                                conditionsParticulieres: bl.conditionsParticulieres || '',
+                                montantHT: bl.montantHT || '0.00',
+                                montantTVA: bl.montantTVA || '0.00',
+                                montantTTC: bl.montantTTC || '0.00',
+                                statut: bl.statut || 'En cours',
+                                fournisseur_id: bl.fournisseur_id || '',
+                                items: bl.items || []
+                              });
+                              setShowBlModal(true);
+                            }}
+                            title="Modifier"
+                            style={{
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              width: '28px', height: '28px', borderRadius: '6px', border: '1px solid #cbd5e1',
+                              backgroundColor: '#f8fafc', color: '#64748b', cursor: 'pointer', transition: 'all 0.2s'
+                            }}
+                            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#e2e8f0'; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#f8fafc'; }}
+                          >
+                            <Edit2 size={14} />
                           </button>
                           <button
                             onClick={() => handleDeleteBl(bl.id)}
                             title="Supprimer"
                             style={{
-                              width: '32px', height: '32px',
-                              borderRadius: '8px',
-                              border: '1px solid rgba(239, 68, 68, 0.18)',
-                              backgroundColor: 'rgba(239, 68, 68, 0.05)',
-                              color: '#ef4444',
-                              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                              cursor: 'pointer',
-                              transition: 'all 0.2s ease',
-                              outline: 'none',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              width: '28px', height: '28px', borderRadius: '6px', border: '1px solid #cbd5e1',
+                              backgroundColor: '#f8fafc', color: '#64748b', cursor: 'pointer', transition: 'all 0.2s'
                             }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.backgroundColor = '#ef4444';
-                              e.currentTarget.style.color = '#ffffff';
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.05)';
-                              e.currentTarget.style.color = '#ef4444';
-                            }}
+                            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#fee2e2'; e.currentTarget.style.color = '#ef4444'; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#f8fafc'; e.currentTarget.style.color = '#64748b'; }}
                           >
-                            <Trash2 size={15} />
+                            <Trash2 size={14} />
+                          </button>
+                          <button
+                            onClick={() => handleExportBlToExcel(bl)}
+                            title="Télécharger Excel"
+                            style={{
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              width: '28px', height: '28px', borderRadius: '6px', border: '1px solid rgba(16,185,129,0.2)',
+                              backgroundColor: '#f0fdf4', color: '#10b981', cursor: 'pointer', transition: 'all 0.2s'
+                            }}
+                            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#dcfce7'; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#f0fdf4'; }}
+                          >
+                            <Download size={14} />
                           </button>
                         </td>
                       </tr>
@@ -2317,7 +2281,7 @@ const MarchesContent = () => {
                                     <span style={{ fontWeight: '700', color: '#0f766e', minWidth: '80px' }}>N&deg; {item.price_number}</span>
                                     <span style={{ flex: 1, marginLeft: '12px', color: '#334155' }}>{item.service_description}</span>
                                     <span style={{ color: '#64748b', fontSize: '12px', minWidth: '150px', textAlign: 'right' }}>
-                                      {item.unit_of_measure} | {parseFloat(item.unit_price_ht).toFixed(2)} MAD
+                                      {item.unit_of_measure} | {parseFloat(item.unit_price_ht ?? (item.price ?? (item.pu ?? (item.unit_price ?? 0)))).toFixed(2)} MAD
                                     </span>
                                   </div>
                                 ))}
@@ -2409,6 +2373,533 @@ const MarchesContent = () => {
         </div>
       )}
 
+      {/* Modal Add/Edit BL */}
+      {showBlModal && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50
+        }}>
+          <div style={{
+            backgroundColor: 'white', borderRadius: '16px', width: '95%', maxWidth: '1000px',
+            padding: '24px 32px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)',
+            maxHeight: '90vh', display: 'flex', flexDirection: 'column'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
+              <h2 style={{ margin: 0, fontSize: '20px', fontWeight: '700', color: '#0f172a' }}>
+                {editingBl ? 'Modifier le Bon de livraison (BL)' : 'Créer un Bon de livraison (BL)'}
+              </h2>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowBlModal(false);
+                  setEditingBl(null);
+                }}
+                style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%', transition: 'background-color 0.2s' }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f1f5f9'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveBl} style={{ display: 'flex', flexDirection: 'column', gap: '20px', overflowY: 'auto', flex: 1, paddingRight: '12px' }}>
+              
+              {/* Form Grid */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>Numéro du BL *</label>
+                  <input
+                    type="text"
+                    value={newBlData.numeroBL}
+                    onChange={(e) => setNewBlData({ ...newBlData, numeroBL: e.target.value })}
+                    required
+                    style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '13px', color: '#334155' }}
+                    placeholder="Ex: BL-2024-001"
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>Date de Livraison *</label>
+                  <input
+                    type="date"
+                    value={newBlData.dateLivraison}
+                    onChange={(e) => setNewBlData({ ...newBlData, dateLivraison: e.target.value })}
+                    required
+                    style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '13px', color: '#334155' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>Fournisseur</label>
+                  <input
+                    type="text"
+                    value={fournisseurs.find(f => f.id.toString() === selectedMarche?.id_fournisseur?.toString())?.raisonSociale || 'Chargement...'}
+                    disabled
+                    style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #e2e8f0', backgroundColor: '#f8fafc', outline: 'none', fontSize: '13px', color: '#64748b' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>Client / Établissement</label>
+                  <input
+                    type="text"
+                    value={newBlData.lieuLivraison}
+                    onChange={(e) => setNewBlData({ ...newBlData, lieuLivraison: e.target.value })}
+                    style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '13px', color: '#334155' }}
+                  />
+                </div>
+              </div>
+
+              {/* BC Selection - Multi-select drop-down with live search */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }} className="bl-dropdown-container">
+                <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569' }}>Réf. Bon de Commande (BC) *</label>
+                <div style={{ position: 'relative' }}>
+                  <button
+                    type="button"
+                    onClick={() => setBlDropdownOpen(!blDropdownOpen)}
+                    style={{
+                      width: '100%', padding: '10px 14px', borderRadius: '6px',
+                      border: '1px solid #cbd5e1', background: 'white', color: newBlData.referenceBCs.length ? '#334155' : '#94a3b8',
+                      fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center',
+                      justifyContent: 'space-between', outline: 'none', textAlign: 'left'
+                    }}
+                  >
+                    <span>
+                      {newBlData.referenceBCs.length === 0
+                        ? 'Sélectionner un ou plusieurs Bons de Commande...'
+                        : `${newBlData.referenceBCs.length} BC sélectionné(s) : ${newBlData.referenceBCs.join(', ')}`}
+                    </span>
+                    <ChevronDown size={16} />
+                  </button>
+
+                  {blDropdownOpen && (
+                    <div style={{
+                      position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 100,
+                      background: 'white', border: '1px solid #cbd5e1', borderRadius: '8px',
+                      boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', marginTop: '4px',
+                      maxHeight: '260px', overflowY: 'auto'
+                    }}>
+                      <div style={{ padding: '8px', borderBottom: '1px solid #f1f5f9', position: 'sticky', top: 0, backgroundColor: 'white', zIndex: 10 }}>
+                        <input
+                          type="text"
+                          placeholder="Rechercher par numéro de BC..."
+                          onChange={(e) => {
+                            const filterVal = e.target.value.toLowerCase();
+                            const items = document.querySelectorAll('.bc-item-option');
+                            items.forEach(el => {
+                              const text = el.getAttribute('data-bc-num').toLowerCase();
+                              if (text.includes(filterVal)) {
+                                el.style.display = 'flex';
+                              } else {
+                                el.style.display = 'none';
+                              }
+                            });
+                          }}
+                          style={{ width: '100%', padding: '6px 12px', borderRadius: '4px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '12px' }}
+                        />
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column' }}>
+                        {bcs.filter(bc => bc.fournisseur_id?.toString() === selectedMarche?.id_fournisseur?.toString()).length === 0 ? (
+                          <div style={{ padding: '12px', fontSize: '13px', color: '#64748b', textAlign: 'center' }}>
+                            Aucun Bon de Commande disponible pour ce fournisseur.
+                          </div>
+                        ) : (
+                          bcs.filter(bc => bc.fournisseur_id?.toString() === selectedMarche?.id_fournisseur?.toString()).map(bc => {
+                            const isSelected = newBlData.referenceBCs.includes(bc.numeroBC);
+                            return (
+                              <div
+                                key={bc.id}
+                                className="bc-item-option"
+                                data-bc-num={bc.numeroBC}
+                                onClick={() => {
+                                  const alreadySelected = newBlData.referenceBCs.includes(bc.numeroBC);
+                                  const updatedBCs = alreadySelected
+                                    ? newBlData.referenceBCs.filter(x => x !== bc.numeroBC)
+                                    : [...newBlData.referenceBCs, bc.numeroBC];
+                                  setNewBlData({ ...newBlData, referenceBCs: updatedBCs });
+                                }}
+                                style={{
+                                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                  padding: '10px 14px', cursor: 'pointer', fontSize: '13px',
+                                  backgroundColor: isSelected ? '#ecfdf5' : 'transparent',
+                                  transition: 'background 0.15s'
+                                }}
+                                onMouseEnter={(e) => { if (!isSelected) e.currentTarget.style.backgroundColor = '#f8fafc'; }}
+                                onMouseLeave={(e) => { if (!isSelected) e.currentTarget.style.backgroundColor = 'transparent'; }}
+                              >
+                                <div>
+                                  <span style={{ fontWeight: '600', color: isSelected ? '#0f766e' : '#334155' }}>{bc.numeroBC}</span>
+                                  <span style={{ fontSize: '11px', color: '#94a3b8', marginLeft: '8px' }}>
+                                    {new Date(bc.dateEmission).toLocaleDateString('fr-FR')}
+                                  </span>
+                                  <span style={{
+                                    fontSize: '10px',
+                                    backgroundColor: (bc.items?.length || 0) > 0 ? '#e0f2fe' : '#fee2e2',
+                                    color: (bc.items?.length || 0) > 0 ? '#0369a1' : '#b91c1c',
+                                    padding: '2px 6px',
+                                    borderRadius: '4px',
+                                    marginLeft: '8px',
+                                    fontWeight: '600'
+                                  }}>
+                                    {(bc.items?.length || 0)} article(s)
+                                  </span>
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                  <span style={{ fontSize: '12px', color: '#64748b', fontWeight: '500' }}>
+                                    {parseFloat(bc.montantTTC || 0).toLocaleString('fr-FR')} MAD
+                                  </span>
+                                  <div style={{
+                                    width: '16px', height: '16px', borderRadius: '4px',
+                                    border: `1.5px solid ${isSelected ? '#10b981' : '#cbd5e1'}`,
+                                    backgroundColor: isSelected ? '#10b981' : 'transparent',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center'
+                                  }}>
+                                    {isSelected && <Check size={10} color="white" />}
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Consolidated Products Table */}
+              <div>
+                <h3 style={{ fontSize: '14px', fontWeight: '700', color: '#0f172a', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  Articles consolidés des BC sélectionnés
+                  <span style={{ fontSize: '11px', fontWeight: 'normal', color: '#64748b' }}>(Fusion automatique des doublons)</span>
+                </h3>
+
+                <div style={{ border: '1px solid #cbd5e1', borderRadius: '8px', overflow: 'hidden' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+                    <thead>
+                      <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #cbd5e1', textAlign: 'left' }}>
+                        <th style={{ padding: '10px 12px', fontWeight: '700', color: '#475569' }}>Réf. BC</th>
+                        <th style={{ padding: '10px 12px', fontWeight: '700', color: '#475569' }}>N° Prix</th>
+                        <th style={{ padding: '10px 12px', fontWeight: '700', color: '#475569' }}>Désignation</th>
+                        <th style={{ padding: '10px 12px', fontWeight: '700', color: '#475569', textAlign: 'center' }}>Unité</th>
+                        <th style={{ padding: '10px 12px', fontWeight: '700', color: '#475569', textAlign: 'right' }}>Quantité</th>
+                        <th style={{ padding: '10px 12px', fontWeight: '700', color: '#475569', textAlign: 'right' }}>PU (MAD)</th>
+                        <th style={{ padding: '10px 12px', fontWeight: '700', color: '#475569', textAlign: 'right' }}>TVA (%)</th>
+                        <th style={{ padding: '10px 12px', fontWeight: '700', color: '#475569', textAlign: 'right' }}>Total HT</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {newBlData.items.length === 0 ? (
+                        <tr>
+                          <td colSpan="8" style={{ padding: '24px', textAlign: 'center', color: '#94a3b8' }}>
+                            Aucun produit chargé. Veuillez sélectionner un ou plusieurs bons de commande.
+                          </td>
+                        </tr>
+                      ) : (
+                        newBlData.items.map((item, idx) => {
+                          const qty = parseFloat(item.qty || 0);
+                          const pu = parseFloat(item.unit_price_ht ?? (item.price ?? (item.pu ?? (item.unit_price ?? 0))));
+                          const vat = parseFloat(item.vat_rate !== undefined ? item.vat_rate : 20);
+                          const lineHt = qty * pu;
+                          return (
+                            <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                              <td style={{ padding: '8px 12px' }}>
+                                <span style={{ backgroundColor: '#f1f5f9', color: '#475569', padding: '2px 6px', borderRadius: '4px', fontSize: '10px', fontWeight: '600' }}>
+                                  {item._bcRef || '—'}
+                                </span>
+                              </td>
+                              <td style={{ padding: '8px 12px', fontWeight: '600', color: '#0f766e' }}>{item.price_number || '—'}</td>
+                              <td style={{ padding: '8px 12px', color: '#334155', fontWeight: '500' }}>{item.service_description || item.designation || '—'}</td>
+                              <td style={{ padding: '8px 12px', textAlign: 'center', color: '#64748b' }}>{item.unit_of_measure || '—'}</td>
+                              <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: '700', color: '#0f172a' }}>{qty}</td>
+                              <td style={{ padding: '8px 12px', textAlign: 'right' }}>{pu.toFixed(2)}</td>
+                              <td style={{ padding: '8px 12px', textAlign: 'right', color: '#64748b' }}>{vat}%</td>
+                              <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: '600' }}>{lineHt.toFixed(2)}</td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Totals Section */}
+              {(() => {
+                const breakdown = calculateVatBreakdown(newBlData.items);
+                return (
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid #e2e8f0', paddingTop: '16px' }}>
+                    <div style={{ width: '320px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: '#64748b' }}>
+                        <span>Total HT :</span>
+                        <span style={{ fontWeight: '600', color: '#334155' }}>
+                          {breakdown.totalHt.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} MAD
+                        </span>
+                      </div>
+                      
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#64748b', paddingLeft: '8px', borderLeft: '2px solid #cbd5e1' }}>
+                        <span>TVA 9% (Base HT: {breakdown.baseHt9.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} MAD) :</span>
+                        <span style={{ fontWeight: '500', color: '#475569' }}>
+                          {breakdown.tva9.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} MAD
+                        </span>
+                      </div>
+
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#64748b', paddingLeft: '8px', borderLeft: '2px solid #cbd5e1' }}>
+                        <span>TVA 10% (Base HT: {breakdown.baseHt10.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} MAD) :</span>
+                        <span style={{ fontWeight: '500', color: '#475569' }}>
+                          {breakdown.tva10.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} MAD
+                        </span>
+                      </div>
+
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#64748b', paddingLeft: '8px', borderLeft: '2px solid #cbd5e1' }}>
+                        <span>TVA 20% (Base HT: {breakdown.baseHt20.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} MAD) :</span>
+                        <span style={{ fontWeight: '500', color: '#475569' }}>
+                          {breakdown.tva20.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} MAD
+                        </span>
+                      </div>
+
+                      <div style={{
+                        display: 'flex', justifyContent: 'space-between', fontSize: '14px', fontWeight: '800',
+                        color: '#0f766e', backgroundColor: '#ecfdf5', padding: '10px 14px', borderRadius: '8px',
+                        border: '1px solid rgba(16,185,129,0.2)', marginTop: '4px'
+                      }}>
+                        <span>Total TTC :</span>
+                        <span>
+                          {breakdown.totalTtc.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} MAD
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Actions Footer */}
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', borderTop: '1px solid #e2e8f0', paddingTop: '16px' }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setNewBlData({
+                      ...newBlData,
+                      numeroBL: `BL-${new Date().getFullYear()}-00${bls.length + 1}`,
+                      dateLivraison: new Date().toISOString().split('T')[0],
+                      referenceBCs: [],
+                      montantHT: '0.00',
+                      montantTVA: '0.00',
+                      montantTTC: '0.00',
+                      items: []
+                    });
+                    setBlDropdownOpen(false);
+                  }}
+                  style={{
+                    padding: '10px 20px', borderRadius: '8px', border: '1px solid #cbd5e1',
+                    backgroundColor: 'white', color: '#475569', fontWeight: '600', cursor: 'pointer', fontSize: '14px'
+                  }}
+                >
+                  Réinitialiser
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowBlModal(false);
+                    setEditingBl(null);
+                  }}
+                  style={{
+                    padding: '10px 20px', borderRadius: '8px', border: '1px solid #cbd5e1',
+                    backgroundColor: '#f1f5f9', color: '#475569', fontWeight: '600', cursor: 'pointer', fontSize: '14px'
+                  }}
+                >
+                  Annuler
+                </button>
+                <button
+                  type="submit"
+                  disabled={newBlData.referenceBCs.length === 0}
+                  style={{
+                    padding: '10px 24px', borderRadius: '8px', border: 'none',
+                    backgroundColor: newBlData.referenceBCs.length === 0 ? '#94a3b8' : '#0f766e',
+                    color: 'white', fontWeight: '600', cursor: newBlData.referenceBCs.length === 0 ? 'not-allowed' : 'pointer', fontSize: '14px'
+                  }}
+                >
+                  {editingBl ? 'Enregistrer les modifications' : 'Créer le Bon de livraison'}
+                </button>
+              </div>
+
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal View BL details */}
+      {selectedBlForView && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50
+        }}>
+          <div style={{
+            backgroundColor: 'white', borderRadius: '16px', width: '100%', maxWidth: '700px',
+            padding: '32px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)',
+            maxHeight: '90vh', overflowY: 'auto'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', borderBottom: '1px solid #e2e8f0', paddingBottom: '16px' }}>
+              <div>
+                <span style={{ backgroundColor: '#ecfdf5', color: '#0f766e', padding: '4px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: '700', marginRight: '8px' }}>
+                  {selectedBlForView.numeroBL}
+                </span>
+                <h2 style={{ margin: '6px 0 0 0', fontSize: '20px', fontWeight: '700', color: '#0f172a' }}>
+                  {selectedBlForView.rubrique || 'Bon de Livraison'}
+                </h2>
+              </div>
+              <button
+                onClick={() => setSelectedBlForView(null)}
+                style={{ background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer', color: '#64748b', lineHeight: 1 }}
+              >
+                &times;
+              </button>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '24px' }}>
+              <div>
+                <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '700', textTransform: 'uppercase', marginBottom: '4px' }}>Date de Livraison</div>
+                <div style={{ fontSize: '14px', fontWeight: '600', color: '#334155' }}>
+                  {new Date(selectedBlForView.dateLivraison).toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '700', textTransform: 'uppercase', marginBottom: '4px' }}>Fournisseur</div>
+                <div style={{ fontSize: '14px', fontWeight: '600', color: '#334155' }}>
+                  {fournisseurs.find(f => f.id.toString() === selectedBlForView.fournisseur_id?.toString())?.raisonSociale || 'DISMA Maroc'}
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px', marginBottom: '24px', backgroundColor: '#f8fafc', padding: '16px', borderRadius: '12px' }}>
+              <div>
+                <div style={{ fontSize: '10px', color: '#94a3b8', fontWeight: '700', textTransform: 'uppercase', marginBottom: '2px' }}>Exercice</div>
+                <div style={{ fontSize: '13px', fontWeight: '600', color: '#334155' }}>{selectedBlForView.exercice || '2024'}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: '10px', color: '#94a3b8', fontWeight: '700', textTransform: 'uppercase', marginBottom: '2px' }}>Bons de Commande</div>
+                <div style={{ fontSize: '13px', fontWeight: '600', color: '#0f766e' }}>{selectedBlForView.referenceBCs?.join(', ') || 'Non spécifié'}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: '10px', color: '#94a3b8', fontWeight: '700', textTransform: 'uppercase', marginBottom: '2px' }}>Lieu de Livraison</div>
+                <div style={{ fontSize: '13px', fontWeight: '600', color: '#334155' }}>{selectedBlForView.lieuLivraison || 'Casablanca'}</div>
+              </div>
+            </div>
+
+            <h3 style={{ fontSize: '14px', fontWeight: '700', color: '#0f172a', marginBottom: '12px' }}>Liste des articles livrés</h3>
+            <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '24px' }}>
+              <thead>
+                <tr style={{ borderBottom: '2px solid #cbd5e1', textAlign: 'left' }}>
+                  <th style={{ padding: '8px', fontSize: '11px', fontWeight: '700', color: '#64748b', width: '40px' }}>#</th>
+                  <th style={{ padding: '8px', fontSize: '11px', fontWeight: '700', color: '#64748b' }}>DÉSIGNATION</th>
+                  <th style={{ padding: '8px', fontSize: '11px', fontWeight: '700', color: '#64748b', width: '80px' }}>UNITÉ</th>
+                  <th style={{ padding: '8px', fontSize: '11px', fontWeight: '700', color: '#64748b', width: '70px', textAlign: 'center' }}>QTÉ</th>
+                  <th style={{ padding: '8px', fontSize: '11px', fontWeight: '700', color: '#64748b', width: '100px', textAlign: 'right' }}>PU (MAD)</th>
+                  <th style={{ padding: '8px', fontSize: '11px', fontWeight: '700', color: '#475569', width: '110px', textAlign: 'right' }}>TOTAL HT</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(selectedBlForView.items || []).map((item, idx) => {
+                  const unitPrice = parseFloat(item.unit_price_ht ?? (item.price ?? (item.pu ?? (item.unit_price ?? 0))));
+                  const qty = parseFloat(item.qty || 0);
+                  const totalLineHt = qty * unitPrice;
+                  return (
+                    <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                      <td style={{ padding: '10px 8px', fontSize: '12px', color: '#64748b' }}>{idx + 1}</td>
+                      <td style={{ padding: '10px 8px', fontSize: '13px', fontWeight: '600', color: '#0f172a' }}>{item.service_description || item.designation}</td>
+                      <td style={{ padding: '10px 8px', fontSize: '12px', color: '#475569' }}>{item.unit_of_measure || '—'}</td>
+                      <td style={{ padding: '10px 8px', fontSize: '13px', color: '#0f172a', textAlign: 'center', fontWeight: '600' }}>{qty}</td>
+                      <td style={{ padding: '10px 8px', fontSize: '13px', color: '#475569', textAlign: 'right' }}>{unitPrice.toFixed(2)}</td>
+                      <td style={{ padding: '10px 8px', fontSize: '13px', fontWeight: '700', color: '#334155', textAlign: 'right' }}>{totalLineHt.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} MAD</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+
+            {/* Calculations */}
+            {(() => {
+              const viewBreakdown = calculateVatBreakdown(selectedBlForView.items);
+              return (
+                <div style={{ display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid #cbd5e1', paddingTop: '16px' }}>
+                  <div style={{ width: '320px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: '#64748b' }}>
+                      <span>Montant HT :</span>
+                      <span style={{ fontWeight: '600', color: '#334155' }}>
+                        {viewBreakdown.totalHt.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} MAD
+                      </span>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#64748b', paddingLeft: '8px', borderLeft: '2px solid #cbd5e1' }}>
+                      <span>TVA 9% (Base HT: {viewBreakdown.baseHt9.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} MAD) :</span>
+                      <span style={{ fontWeight: '500', color: '#475569' }}>
+                        {viewBreakdown.tva9.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} MAD
+                      </span>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#64748b', paddingLeft: '8px', borderLeft: '2px solid #cbd5e1' }}>
+                      <span>TVA 10% (Base HT: {viewBreakdown.baseHt10.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} MAD) :</span>
+                      <span style={{ fontWeight: '500', color: '#475569' }}>
+                        {viewBreakdown.tva10.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} MAD
+                      </span>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#64748b', paddingLeft: '8px', borderLeft: '2px solid #cbd5e1' }}>
+                      <span>TVA 20% (Base HT: {viewBreakdown.baseHt20.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} MAD) :</span>
+                      <span style={{ fontWeight: '500', color: '#475569' }}>
+                        {viewBreakdown.tva20.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} MAD
+                      </span>
+                    </div>
+
+                    <div style={{
+                      display: 'flex', justifyContent: 'space-between', fontSize: '14px', fontWeight: '800',
+                      color: '#0f766e', borderTop: '1px double #cbd5e1', paddingTop: '8px', marginTop: '4px'
+                    }}>
+                      <span>Montant TTC :</span>
+                      <span>
+                        {viewBreakdown.totalTtc.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} MAD
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '24px', borderTop: '1px solid #e2e8f0', paddingTop: '16px' }}>
+              <button
+                type="button"
+                onClick={() => handleExportBlToExcel(selectedBlForView)}
+                className="btn-secondary"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '10px 20px',
+                  backgroundColor: '#f0fdf4',
+                  border: '1px solid rgba(16, 185, 129, 0.2)',
+                  borderRadius: '8px',
+                  color: '#10b981',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#dcfce7'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#f0fdf4'; }}
+              >
+                <Download size={16} /> Exporter Excel
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedBlForView(null)}
+                className="btn-primary"
+                style={{ padding: '10px 20px', backgroundColor: '#0f766e', border: 'none', borderRadius: '8px', color: 'white', fontWeight: '600', cursor: 'pointer' }}
+              >
+                Fermer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Modal View BC details */}
       {selectedBcForView && (
         <div style={{
@@ -2496,16 +2987,21 @@ const MarchesContent = () => {
                 </tr>
               </thead>
               <tbody>
-                {bcItems.map((item, idx) => (
-                  <tr key={item.id || idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                    <td style={{ padding: '10px 8px', fontSize: '12px', color: '#64748b' }}>{idx + 1}</td>
-                    <td style={{ padding: '10px 8px', fontSize: '13px', fontWeight: '600', color: '#0f172a' }}>{item.label}</td>
-                    <td style={{ padding: '10px 8px', fontSize: '12px', color: '#475569' }}>{item.unit}</td>
-                    <td style={{ padding: '10px 8px', fontSize: '13px', color: '#0f172a', textAlign: 'center', fontWeight: '600' }}>{item.qty}</td>
-                    <td style={{ padding: '10px 8px', fontSize: '13px', color: '#475569', textAlign: 'right' }}>{parseFloat(item.price).toFixed(2)}</td>
-                    <td style={{ padding: '10px 8px', fontSize: '13px', fontWeight: '700', color: '#0f172a', textAlign: 'right' }}>{(item.qty * item.price).toLocaleString('fr-FR', { minimumFractionDigits: 2 })} MAD</td>
-                  </tr>
-                ))}
+                {(selectedBcForView.items || []).map((item, idx) => {
+                  const unitPrice = parseFloat(item.unit_price_ht ?? (item.price ?? (item.pu ?? (item.unit_price ?? 0))));
+                  const qty = parseFloat(item.qty || 0);
+                  const totalLineHt = qty * unitPrice;
+                  return (
+                    <tr key={item.id || idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                      <td style={{ padding: '10px 8px', fontSize: '12px', color: '#64748b' }}>{item.price_number || (idx + 1)}</td>
+                      <td style={{ padding: '10px 8px', fontSize: '13px', fontWeight: '600', color: '#0f172a' }}>{item.service_description}</td>
+                      <td style={{ padding: '10px 8px', fontSize: '12px', color: '#475569' }}>{item.unit_of_measure || '—'}</td>
+                      <td style={{ padding: '10px 8px', fontSize: '13px', color: '#0f172a', textAlign: 'center', fontWeight: '600' }}>{qty}</td>
+                      <td style={{ padding: '10px 8px', fontSize: '13px', color: '#475569', textAlign: 'right' }}>{unitPrice.toFixed(2)}</td>
+                      <td style={{ padding: '10px 8px', fontSize: '13px', fontWeight: '700', color: '#0f172a', textAlign: 'right' }}>{totalLineHt.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} MAD</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
 
@@ -2536,9 +3032,31 @@ const MarchesContent = () => {
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '24px', borderTop: '1px solid #e2e8f0', paddingTop: '16px' }}>
               <button
                 type="button"
+                onClick={() => handleExportBcToExcel(selectedBcForView)}
+                className="btn-secondary"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '10px 20px',
+                  backgroundColor: '#f0fdf4',
+                  border: '1px solid rgba(16, 185, 129, 0.2)',
+                  borderRadius: '8px',
+                  color: '#10b981',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#dcfce7'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#f0fdf4'; }}
+              >
+                <Download size={16} /> Exporter Excel
+              </button>
+              <button
+                type="button"
                 onClick={() => setSelectedBcForView(null)}
                 className="btn-primary"
-                style={{ padding: '10px 20px', backgroundColor: '#0f766e', border: 'none', borderRadius: '8px', color: 'white', fontWeight: '600' }}
+                style={{ padding: '10px 20px', backgroundColor: '#0f766e', border: 'none', borderRadius: '8px', color: 'white', fontWeight: '600', cursor: 'pointer' }}
               >
                 Fermer
               </button>
