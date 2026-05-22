@@ -62,7 +62,25 @@ const MarchesContent = () => {
     date_fin: ''
   });
   const [submitting, setSubmitting] = useState(false);
-  const [selectedMarche, setSelectedMarche] = useState(null);
+  const [selectedMarche, setSelectedMarche] = useState(() => {
+    const saved = localStorage.getItem('selectedMarche');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        return null;
+      }
+    }
+    return null;
+  });
+
+  useEffect(() => {
+    if (selectedMarche) {
+      localStorage.setItem('selectedMarche', JSON.stringify(selectedMarche));
+    } else {
+      localStorage.removeItem('selectedMarche');
+    }
+  }, [selectedMarche]);
   const [activeDocTab, setActiveDocTab] = useState('bc');
 
   // Dynamic state for Bons de commande documents (now loaded from database)
@@ -193,6 +211,7 @@ const MarchesContent = () => {
     referenceBCs: bl.reference_bc ? bl.reference_bc.split(', ') : [],
     lieuLivraison: bl.client || 'Internat OFPPT Casablanca',
     fournisseur_id: bl.fournisseur_id?.toString() || '',
+    marche_id: bl.marche_id || null,
     items: normalizeBlItems(bl.items),
     montantHT: bl.total_ht,
     montantTVA: bl.total_tva,
@@ -266,6 +285,21 @@ const MarchesContent = () => {
     try {
       const response = await api.get('/marches');
       setMarches(response.data);
+      
+      // Update selectedMarche if it exists in the fetched data
+      const savedMarcheStr = localStorage.getItem('selectedMarche');
+      if (savedMarcheStr) {
+        try {
+          const parsed = JSON.parse(savedMarcheStr);
+          const updatedMarche = response.data.find(m => m.id === parsed.id);
+          if (updatedMarche) {
+            setSelectedMarche(updatedMarche);
+          }
+        } catch (e) {
+          // ignore
+        }
+      }
+      
       setLoading(false);
     } catch (error) {
       console.error('Erreur de chargement', error.response || error);
@@ -350,10 +384,10 @@ const MarchesContent = () => {
   };
 
   const handleSubmit = async (e) => {
+    // (Existing handleSubmit logic)
     e.preventDefault();
     setSubmitting(true);
     try {
-      // Fetch selected bordereau max amount for the budget
       const selectedBordereau = bordereauHeaders.find(b => (b.market_name || `Bordereau #${b.id}`) === formData.titulaire);
       const budgetMax = selectedBordereau 
         ? parseFloat(selectedBordereau.bordereaux_sum_maximum_total_price_ttc ?? selectedBordereau.total_ttc_max ?? 0) 
@@ -383,6 +417,13 @@ const MarchesContent = () => {
   const [tempQty, setTempQty] = useState(1);
   const [tempPrice, setTempPrice] = useState('');
   const [tempVat, setTempVat] = useState(20);
+
+  // --- ISOLATION LOGIC ---
+  const associatedBordereauHeader = selectedMarche ? bordereauHeaders.find(b => b.market_name === selectedMarche.titulaire) : null;
+  const associatedBordereauHeaderId = associatedBordereauHeader ? associatedBordereauHeader.id : null;
+  const providerBcs = bcs.filter(bc => selectedMarche && bc.marche_id === selectedMarche.id);
+  const providerBls = bls.filter(bl => selectedMarche && bl.marche_id === selectedMarche.id);
+  const providerFactures = factures.filter(f => selectedMarche && f.marche_id === selectedMarche.id);
 
   const recalculateBcTotals = (itemsList) => {
     let ht = 0;
@@ -516,7 +557,9 @@ const MarchesContent = () => {
     try {
       const payload = {
         ...newBcData,
-        fournisseur_id: newBcData.fournisseur_id || selectedMarche?.id_fournisseur || null
+        fournisseur_id: newBcData.fournisseur_id || selectedMarche?.id_fournisseur || null,
+        marche_id: selectedMarche ? selectedMarche.id : null,
+        referenceMarcheCadre: newBcData.referenceMarcheCadre
       };
 
       if (editingBc) {
@@ -609,7 +652,6 @@ const MarchesContent = () => {
   };
 
   const handleExportAllBcsToExcel = () => {
-    const providerBcs = bcs.filter(bc => bc.fournisseur_id?.toString() === selectedMarche?.id_fournisseur?.toString());
     const filename = `Bons_de_commande_${selectedMarche.titulaire}.xls`;
 
     let html = `
@@ -718,10 +760,9 @@ const MarchesContent = () => {
     }
   };
 
-  // --- BL Consolidator ---
   useEffect(() => {
     if (!showBlModal) return;
-    const selectedBCs = bcs.filter(bc => newBlData.referenceBCs.includes(bc.numeroBC));
+    const selectedBCs = providerBcs.filter(bc => newBlData.referenceBCs.includes(bc.numeroBC));
     console.log("Moteur de consolidation déclenché. BCs sélectionnés :", selectedBCs);
 
     // Merge all items from selected BCs, summing quantities for matching price numbers
@@ -830,6 +871,7 @@ const MarchesContent = () => {
         date_bl: newBlData.dateLivraison,
         fournisseur: fournisseurs.find(f => f.id.toString() === selectedMarche?.id_fournisseur?.toString())?.raisonSociale || '',
         fournisseur_id: selectedMarche?.id_fournisseur || null,
+        marche_id: selectedMarche ? selectedMarche.id : null,
         reference_bc: Array.isArray(newBlData.referenceBCs) ? newBlData.referenceBCs.join(', ') : '',
         client: newBlData.lieuLivraison,
         total_ht: parseFloat(newBlData.montantHT),
@@ -969,6 +1011,7 @@ const MarchesContent = () => {
         date_facture: newFactureData.date_facture,
         client: newFactureData.client,
         reference_bl: newFactureData.reference_bl,
+        marche_id: selectedMarche ? selectedMarche.id : null,
         conditions_generales: newFactureData.conditions_generales,
         conditions_particulieres: newFactureData.conditions_particulieres,
         total_ht: newFactureData.montantHT,
@@ -1095,14 +1138,14 @@ const MarchesContent = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {bcs.length === 0 ? (
+                  {providerBcs.length === 0 ? (
                     <tr>
                       <td colSpan="7" style={{ padding: '24px', textAlign: 'center', color: '#64748b', fontSize: '14px' }}>
                         Aucun bon de commande trouvé. Cliquez sur "Nouveau BC" pour en ajouter un.
                       </td>
                     </tr>
                   ) : (
-                    bcs.map((bc, idx) => (
+                    providerBcs.map((bc, idx) => (
                       <tr key={bc.id || idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
                         <td style={{ padding: '14px 8px', fontSize: '12px', color: '#64748b' }}>{idx + 1}</td>
                         <td style={{ padding: '14px 8px', fontSize: '13px', fontWeight: '600', color: '#0f172a' }}>
@@ -1216,7 +1259,7 @@ const MarchesContent = () => {
     }
 
     if (activeDocTab === 'bl') {
-      const filteredBls = bls.filter(bl => bl.fournisseur_id?.toString() === selectedMarche.id_fournisseur?.toString());
+      const filteredBls = providerBls;
       return (
         <div>
           {/* Header */}
@@ -1392,7 +1435,7 @@ const MarchesContent = () => {
 
     
     if (activeDocTab === 'attachments') {
-      const filteredAttachments = attachments.filter(a => bls.some(bl => bl.id === a.bon_livraison_id && bl.fournisseur_id?.toString() === selectedMarche.id_fournisseur?.toString()));
+      const filteredAttachments = attachments.filter(a => selectedMarche && a.marche_id === selectedMarche.id);
       
       // Group attachments by BL id
       const grouped = {};
@@ -1411,7 +1454,7 @@ const MarchesContent = () => {
             <button
               onClick={() => {
                 setEditingAttachmentGroup(null);
-                const availableBls = bls.filter(bl => bl.fournisseur_id?.toString() === selectedMarche.id_fournisseur?.toString());
+                const availableBls = providerBls;
                 const defaultBl = availableBls[0];
                 let newItems = [];
                 if (defaultBl) {
@@ -1467,7 +1510,7 @@ const MarchesContent = () => {
                       <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
                         <td style={{ padding: '14px 8px', fontSize: '12px', color: '#64748b' }}>{idx + 1}</td>
                         <td style={{ padding: '14px 8px', fontSize: '13px', fontWeight: '600', color: '#0f172a' }}>
-                           {bls.find(b => b.id === group.bon_livraison_id)?.numeroBL || 'Inconnu'}
+                           {providerBls.find(b => b.id === group.bon_livraison_id)?.numeroBL || 'Inconnu'}
                         </td>
                         <td style={{ padding: '14px 8px', fontSize: '12px', fontWeight: '700', color: '#0f766e' }}>
                           <span style={{ backgroundColor: '#ecfdf5', color: '#0f766e', padding: '4px 8px', borderRadius: '6px', fontSize: '11px' }}>
@@ -1552,7 +1595,7 @@ const MarchesContent = () => {
 
 
     if (activeDocTab === 'facture') {
-      const filteredFactures = factures.filter(f => f.client === 'OFPPT / ISTA Ouarzazate'); // Or any other filtering logic
+      const filteredFactures = providerFactures;
       return (
         <div>
           {/* Header */}
@@ -1817,23 +1860,29 @@ const MarchesContent = () => {
             </div>
             <div>
               <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '600', textTransform: 'uppercase', marginBottom: '4px' }}>Budget Total</div>
-              <div style={{ fontSize: '15px', fontWeight: '700', color: '#0f172a' }}>{parseFloat(selectedMarche.budget || 128000).toLocaleString()} MAD</div>
+              <div style={{ fontSize: '15px', fontWeight: '700', color: '#0f172a' }}>{parseFloat(selectedMarche.budget || 0).toLocaleString()} MAD</div>
             </div>
             <div>
               <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '600', textTransform: 'uppercase', marginBottom: '4px' }}>Consommé</div>
-              <div style={{ fontSize: '15px', fontWeight: '700', color: '#10b981' }}>{parseFloat(selectedMarche.budget * (selectedMarche.consomme || 74) / 100).toLocaleString()} MAD</div>
+              <div style={{ fontSize: '15px', fontWeight: '700', color: '#10b981' }}>
+                {providerBls.reduce((sum, bl) => sum + parseFloat(bl.montantTTC || 0), 0).toLocaleString('fr-FR', { minimumFractionDigits: 2 })} MAD
+              </div>
             </div>
             <div>
               <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '600', textTransform: 'uppercase', marginBottom: '4px' }}>Restant</div>
-              <div style={{ fontSize: '15px', fontWeight: '700', color: '#f59e0b' }}>{parseFloat(selectedMarche.budget - (selectedMarche.budget * (selectedMarche.consomme || 74) / 100)).toLocaleString()} MAD</div>
+              <div style={{ fontSize: '15px', fontWeight: '700', color: '#f59e0b' }}>
+                {(parseFloat(selectedMarche.budget || 0) - providerBls.reduce((sum, bl) => sum + parseFloat(bl.montantTTC || 0), 0)).toLocaleString('fr-FR', { minimumFractionDigits: 2 })} MAD
+              </div>
             </div>
             <div>
               <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '600', textTransform: 'uppercase', marginBottom: '4px' }}>Avancement</div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
                 <div style={{ flex: 1, height: '6px', backgroundColor: '#e2e8f0', borderRadius: '3px', overflow: 'hidden' }}>
-                  <div style={{ width: `${selectedMarche.consomme || 74}%`, height: '100%', backgroundColor: '#0f766e', borderRadius: '3px' }}></div>
+                  <div style={{ width: `${Math.min(100, parseFloat(selectedMarche.budget || 1) > 0 ? (providerBls.reduce((sum, bl) => sum + parseFloat(bl.montantTTC || 0), 0) / parseFloat(selectedMarche.budget)) * 100 : 0).toFixed(1)}%`, height: '100%', backgroundColor: '#0f766e', borderRadius: '3px' }}></div>
                 </div>
-                <span style={{ fontSize: '13px', fontWeight: '700', color: '#334155' }}>{selectedMarche.consomme || 74}%</span>
+                <span style={{ fontSize: '13px', fontWeight: '700', color: '#334155' }}>
+                  {parseFloat(selectedMarche.budget || 1) > 0 ? Math.min(100, ((providerBls.reduce((sum, bl) => sum + parseFloat(bl.montantTTC || 0), 0) / parseFloat(selectedMarche.budget)) * 100)).toFixed(1) : 0}%
+                </span>
               </div>
             </div>
           </div>
@@ -1899,6 +1948,10 @@ const MarchesContent = () => {
   };
 
   const filteredSuggestions = productSearch.trim() === '' ? [] : bordereauItems.filter(item => {
+    // Isolate products by selected Marche's Bordereau Header ID
+    if (!associatedBordereauHeaderId) return false;
+    if (item.bordereau_header_id !== associatedBordereauHeaderId) return false;
+
     const q = productSearch.toLowerCase();
     
     // Filtre par texte
@@ -2804,7 +2857,7 @@ const MarchesContent = () => {
                         />
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column' }}>
-                        {bcs.filter(bc => bc.fournisseur_id?.toString() === selectedMarche?.id_fournisseur?.toString()).length === 0 ? (
+                        {providerBcs.length === 0 ? (
                           <div style={{ padding: '12px', fontSize: '13px', color: '#64748b', textAlign: 'center' }}>
                             Aucun Bon de Commande disponible pour ce fournisseur.
                           </div>
@@ -3399,7 +3452,7 @@ const MarchesContent = () => {
                     }}
                     style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none' }}
                   >
-                    {bls.filter(bl => bl.fournisseur_id?.toString() === selectedMarche?.id_fournisseur?.toString()).map(bl => (
+                    {providerBls.map(bl => (
                         <option key={bl.id} value={bl.id}>{bl.numeroBL}</option>
                     ))}
                   </select>
@@ -3526,7 +3579,8 @@ const MarchesContent = () => {
                 onClick={async () => {
                   try {
                     setSubmitting(true);
-                    await api.post('/attachments-bc', newAttachmentData);
+                    const payload = { ...newAttachmentData, marche_id: selectedMarche ? selectedMarche.id : null };
+                    await api.post('/attachments-bc', payload);
                     await fetchAttachments();
                     setShowAttachmentModal(false);
                   } catch (error) {

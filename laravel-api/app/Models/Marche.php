@@ -18,4 +18,29 @@ class Marche extends Model
         'consomme',
         'statut'
     ];
+
+    public function bordereauHeader()
+    {
+        return $this->hasOne(BordereauHeader::class, 'marche_id');
+    }
+
+    public function bonCommandes()
+    {
+        return $this->hasMany(BonCommande::class, 'marche_id');
+    }
+
+    public function bonLivraisons()
+    {
+        return $this->hasMany(BonLivraison::class, 'marche_id');
+    }
+
+    public function factures()
+    {
+        return $this->hasMany(Facture::class, 'marche_id');
+    }
+
+    public function attachmentsBc()
+    {
+        return $this->hasMany(AttachmentBc::class, 'marche_id');
+    }
 }

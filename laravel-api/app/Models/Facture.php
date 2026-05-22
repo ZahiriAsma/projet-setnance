@@ -15,4 +15,9 @@ class Facture extends Model
     {
         return $this->hasMany(FactureArticle::class);
     }
+
+    public function marche()
+    {
+        return $this->belongsTo(Marche::class, 'marche_id');
+    }
 }

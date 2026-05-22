@@ -18,6 +18,7 @@ class BonCommande extends Model
         'exercice',
         'rubrique',
         'referenceMarcheCadre',
+        'marche_id',
         'lieuLivraison',
         'conditionsGenerales',
         'conditionsParticulieres',
@@ -37,5 +38,10 @@ class BonCommande extends Model
     public function fournisseur()
     {
         return $this->belongsTo(Fournisseur::class, 'fournisseur_id');
+    }
+
+    public function marche()
+    {
+        return $this->belongsTo(Marche::class, 'marche_id');
     }
 }

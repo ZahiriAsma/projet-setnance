@@ -17,6 +17,7 @@ class BonLivraison extends Model
         'fournisseur',
         'fournisseur_id',
         'reference_bc',
+        'marche_id',
         'client',
         'total_ht',
         'total_tva',
@@ -38,5 +39,10 @@ class BonLivraison extends Model
     public function attachmentsBc()
     {
         return $this->hasMany(AttachmentBc::class, 'bon_livraison_id');
+    }
+
+    public function marche()
+    {
+        return $this->belongsTo(Marche::class, 'marche_id');
     }
 }

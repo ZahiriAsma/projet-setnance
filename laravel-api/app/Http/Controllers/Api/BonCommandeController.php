@@ -35,6 +35,7 @@ class BonCommandeController extends Controller
             'montantTTC' => 'nullable|numeric',
             'statut' => 'nullable|string',
             'fournisseur_id' => 'nullable|exists:fournisseurs,id',
+            'marche_id' => 'nullable|exists:marches,id',
             'items' => 'nullable|array'
         ]);
 
@@ -78,6 +79,7 @@ class BonCommandeController extends Controller
             'montantTTC' => 'nullable|numeric',
             'statut' => 'nullable|string',
             'fournisseur_id' => 'nullable|exists:fournisseurs,id',
+            'marche_id' => 'nullable|exists:marches,id',
             'items' => 'nullable|array'
         ]);
 

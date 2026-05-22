@@ -13,6 +13,7 @@ class AttachmentBc extends Model
 
     protected $fillable = [
         'bon_livraison_id',
+        'marche_id',
         'numero_attachment',
         'budget',
         'exercice',
@@ -29,5 +30,10 @@ class AttachmentBc extends Model
     public function bonLivraison()
     {
         return $this->belongsTo(BonLivraison::class, 'bon_livraison_id');
+    }
+
+    public function marche()
+    {
+        return $this->belongsTo(Marche::class, 'marche_id');
     }
 }

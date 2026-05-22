@@ -31,6 +31,7 @@ class BonLivraisonController extends Controller
             'total_tva' => 'nullable|numeric',
             'total_ttc' => 'nullable|numeric',
             'items' => 'nullable|array',
+            'marche_id' => 'nullable|exists:marches,id',
             'statut' => 'nullable|string'
         ]);
 
@@ -76,6 +77,7 @@ class BonLivraisonController extends Controller
             'total_tva' => 'nullable|numeric',
             'total_ttc' => 'nullable|numeric',
             'items' => 'nullable|array',
+            'marche_id' => 'nullable|exists:marches,id',
             'statut' => 'nullable|string'
         ]);
 

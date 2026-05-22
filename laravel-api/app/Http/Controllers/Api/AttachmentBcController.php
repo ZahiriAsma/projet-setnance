@@ -31,6 +31,7 @@ class AttachmentBcController extends Controller
             $request->validate([
                 'bon_livraison_id' => 'required|exists:bons_livraison,id',
                 'numero_attachment' => 'required|integer',
+                'marche_id' => 'nullable|exists:marches,id',
                 'items.*.numero_article' => 'required|integer',
                 'items.*.designation' => 'required|string',
             ]);
@@ -42,6 +43,7 @@ class AttachmentBcController extends Controller
                 $created[] = AttachmentBc::create([
                     'bon_livraison_id' => $request->bon_livraison_id,
                     'numero_attachment' => $request->numero_attachment,
+                    'marche_id' => $request->marche_id,
                     'budget' => $request->budget ?? 'BF',
                     'exercice' => $request->exercice ?? date('Y'),
                     'rubrique' => $request->rubrique ?? 'ACHAT',
@@ -60,6 +62,7 @@ class AttachmentBcController extends Controller
         $validated = $request->validate([
             'bon_livraison_id' => 'required|exists:bons_livraison,id',
             'numero_attachment' => 'required|integer',
+            'marche_id' => 'nullable|exists:marches,id',
             'budget' => 'required|string',
             'exercice' => 'required|integer',
             'rubrique' => 'required|string',
@@ -83,6 +86,7 @@ class AttachmentBcController extends Controller
         $validated = $request->validate([
             'bon_livraison_id' => 'nullable|exists:bons_livraison,id',
             'numero_attachment' => 'nullable|integer',
+            'marche_id' => 'nullable|exists:marches,id',
             'budget' => 'nullable|string',
             'exercice' => 'nullable|integer',
             'rubrique' => 'nullable|string',

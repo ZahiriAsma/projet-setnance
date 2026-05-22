@@ -11,6 +11,7 @@ class BordereauHeader extends Model
 
     protected $fillable = [
         'market_name',
+        'marche_id',
         'total_ht_min',
         'total_ht_max',
         'total_ttc_min',
@@ -21,6 +22,11 @@ class BordereauHeader extends Model
         'tva_20',
         'amount_in_letters',
     ];
+
+    public function marche()
+    {
+        return $this->belongsTo(Marche::class, 'marche_id');
+    }
 
     public function bordereaux()
     {

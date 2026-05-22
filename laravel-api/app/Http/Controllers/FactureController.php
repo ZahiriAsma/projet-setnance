@@ -21,10 +21,10 @@ class FactureController extends Controller
             'date_facture' => 'required|date',
             'client' => 'nullable|string',
             'reference_bl' => 'nullable|string',
-            'total_ht' => 'nullable|numeric',
             'tva' => 'nullable|numeric',
             'total_ttc' => 'nullable|numeric',
             'statut' => 'nullable|string',
+            'marche_id' => 'nullable|exists:marches,id',
             'conditions_generales' => 'nullable|string',
             'conditions_particulieres' => 'nullable|string',
             'articles' => 'nullable|array'
@@ -57,10 +57,10 @@ class FactureController extends Controller
             'date_facture' => 'required|date',
             'client' => 'nullable|string',
             'reference_bl' => 'nullable|string',
-            'total_ht' => 'nullable|numeric',
             'tva' => 'nullable|numeric',
             'total_ttc' => 'nullable|numeric',
             'statut' => 'nullable|string',
+            'marche_id' => 'nullable|exists:marches,id',
             'conditions_generales' => 'nullable|string',
             'conditions_particulieres' => 'nullable|string',
             'articles' => 'nullable|array'
