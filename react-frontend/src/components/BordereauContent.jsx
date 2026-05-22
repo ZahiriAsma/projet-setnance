@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { 
-  FileSpreadsheet, Upload, Search, ChevronLeft, ChevronRight, 
+import {
+  FileSpreadsheet, Upload, Search, ChevronLeft, ChevronRight,
   ArrowUpDown, AlertCircle, CheckCircle, RefreshCw, HelpCircle
 } from 'lucide-react';
 import api from '../api/axios';
@@ -108,16 +108,17 @@ const BordereauContent = () => {
   const lang = sysConfig?.language || 'fr';
   const isDark = sysConfig?.theme === 'dark';
   const isRtl = lang === 'ar';
-  
+
   const text = T[lang] || T.fr;
 
   const [items, setItems] = useState([]);
+  const [headerInfo, setHeaderInfo] = useState(null);
   const [loading, setLoading] = useState(true);
   const [importing, setImporting] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
-  
+
   // Sort State
   const [sortConfig, setSortConfig] = useState({ key: 'price_number', direction: 'asc' });
 
@@ -144,8 +145,12 @@ const BordereauContent = () => {
   const fetchBordereau = async () => {
     setLoading(true);
     try {
-      const response = await api.get('/bordereau');
-      setItems(response.data);
+      const [itemsRes, headerRes] = await Promise.all([
+        api.get('/bordereau'),
+        api.get('/bordereau/header')
+      ]);
+      setItems(itemsRes.data);
+      setHeaderInfo(headerRes.data);
       setErrorMessage('');
     } catch (error) {
       console.error('Error fetching bordereau data', error);
@@ -184,11 +189,17 @@ const BordereauContent = () => {
           'Content-Type': 'multipart/form-data'
         }
       });
-      
+
       setItems(response.data.data);
+      try {
+        const headerRes = await api.get('/bordereau/header');
+        setHeaderInfo(headerRes.data);
+      } catch (headerError) {
+        console.error('Could not fetch bordereau header after import', headerError);
+      }
       setSuccessMessage(response.data.message || text.success);
       setCurrentPage(1); // Reset to page 1
-      
+
       // Auto-hide success message after 5 seconds
       setTimeout(() => {
         setSuccessMessage('');
@@ -232,7 +243,7 @@ const BordereauContent = () => {
     // 1. Search Query filter
     if (searchQuery.trim() !== '') {
       const query = searchQuery.toLowerCase().trim();
-      result = result.filter(item => 
+      result = result.filter(item =>
         (item.price_number && item.price_number.toString().toLowerCase().includes(query)) ||
         (item.service_description && item.service_description.toLowerCase().includes(query)) ||
         (item.unit_of_measure && item.unit_of_measure.toLowerCase().includes(query))
@@ -389,9 +400,9 @@ const BordereauContent = () => {
 
       {/* Messages */}
       {successMessage && (
-        <div style={{ 
-          display: 'flex', alignItems: 'center', gap: '12px', padding: '16px 20px', 
-          backgroundColor: isDark ? 'rgba(16,185,129,0.1)' : '#f0fdf4', 
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: '12px', padding: '16px 20px',
+          backgroundColor: isDark ? 'rgba(16,185,129,0.1)' : '#f0fdf4',
           border: '1px solid #10b981', borderRadius: '12px', marginBottom: '24px',
           color: isDark ? '#10b981' : '#15803d', fontSize: '14px', fontWeight: '500',
           flexDirection: isRtl ? 'row-reverse' : 'row'
@@ -402,9 +413,9 @@ const BordereauContent = () => {
       )}
 
       {errorMessage && (
-        <div style={{ 
-          display: 'flex', alignItems: 'center', gap: '12px', padding: '16px 20px', 
-          backgroundColor: isDark ? 'rgba(239,68,68,0.1)' : '#fef2f2', 
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: '12px', padding: '16px 20px',
+          backgroundColor: isDark ? 'rgba(239,68,68,0.1)' : '#fef2f2',
           border: '1px solid #ef4444', borderRadius: '12px', marginBottom: '24px',
           color: isDark ? '#ef4444' : '#b91c1c', fontSize: '14px', fontWeight: '500',
           flexDirection: isRtl ? 'row-reverse' : 'row'
@@ -415,18 +426,18 @@ const BordereauContent = () => {
       )}
 
       {/* Upload Dropzone Container */}
-      <div 
+      <div
         className="upload-dropzone"
         onDragOver={onDragOver}
         onDrop={onDrop}
         style={{
-          borderRadius: '16px', padding: '36px', textAlign: 'center', 
+          borderRadius: '16px', padding: '36px', textAlign: 'center',
           marginBottom: '28px', cursor: 'pointer', position: 'relative'
         }}
         onClick={() => fileInputRef.current?.click()}
       >
-        <input 
-          type="file" 
+        <input
+          type="file"
           ref={fileInputRef}
           onChange={(e) => handleFileUpload(e.target.files?.[0])}
           onClick={(e) => e.stopPropagation()}
@@ -465,6 +476,15 @@ const BordereauContent = () => {
         <span>{text.excelHeaderInfo}</span>
       </div>
 
+      {headerInfo && (
+        <div style={{ marginBottom: '28px' }}>
+          <div style={{ backgroundColor: clr.bg, border: `1px solid ${clr.border}`, borderRadius: '16px', padding: '22px', boxShadow: '0 4px 20px -2px rgba(0, 0, 0, 0.02)', width: '100%', boxSizing: 'border-box' }}>
+            <h4 style={{ margin: '0 0 12px 0', fontSize: '15px', fontWeight: '700', color: clr.text, textAlign: isRtl ? 'right' : 'left' }}>Marché / Bordereau</h4>
+            <p style={{ margin: 0, fontSize: '14px', color: clr.textMuted, lineHeight: '1.6' }}>{headerInfo.market_name || '-'}</p>
+          </div>
+        </div>
+      )}
+
       {/* Main Table Card */}
       {loading ? (
         <div style={{ backgroundColor: clr.bg, border: `1px solid ${clr.border}`, borderRadius: '16px', padding: '80px 24px', textAlign: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.01)' }}>
@@ -483,13 +503,13 @@ const BordereauContent = () => {
         </div>
       ) : (
         <div style={{ backgroundColor: clr.bg, border: `1px solid ${clr.border}`, borderRadius: '16px', boxShadow: '0 4px 20px -2px rgba(0, 0, 0, 0.02)', overflow: 'hidden' }}>
-          
+
           {/* Table Toolbar */}
           <div style={{ padding: '20px 24px', borderBottom: `1.5px solid ${clr.border}`, display: 'flex', flexDirection: isRtl ? 'row-reverse' : 'row', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
             <div style={{ position: 'relative', width: '360px' }}>
               <Search size={16} style={{ position: 'absolute', [isRtl ? 'right' : 'left']: '14px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
-              <input 
-                type="text" 
+              <input
+                type="text"
                 placeholder={text.searchPlaceholder}
                 value={searchQuery}
                 onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
@@ -506,7 +526,7 @@ const BordereauContent = () => {
                 }}
               />
             </div>
-            
+
             <div style={{ fontSize: '13px', fontWeight: '600', color: clr.textMuted, display: 'flex', gap: '6px', alignItems: 'center', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
               <span style={{ color: '#0f766e', fontSize: '15px', fontWeight: '800' }}>{processedItems.length}</span>
               <span>{text.results}</span>
@@ -597,9 +617,9 @@ const BordereauContent = () => {
               </thead>
               <tbody>
                 {paginatedItems.map((item, index) => (
-                  <tr 
-                    key={item.id || index} 
-                    style={{ 
+                  <tr
+                    key={item.id || index}
+                    style={{
                       borderBottom: `1px solid ${clr.border}`,
                       color: clr.text,
                       transition: 'background-color 0.2s',
@@ -654,9 +674,57 @@ const BordereauContent = () => {
             </table>
           </div>
 
+          {/* Totals Summary Footer */}
+          {headerInfo && (
+            <div style={{ padding: '20px 24px', borderTop: `2px solid ${isDark ? '#0f766e' : '#10b981'}`, backgroundColor: isDark ? 'rgba(15, 118, 110, 0.05)' : '#f0fdf4', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {/* Totals Grid */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', backgroundColor: clr.bg, borderRadius: '10px', border: `1px solid ${clr.border}` }}>
+                  <span style={{ fontSize: '13px', color: clr.textMuted, fontWeight: '500' }}>Total HT Min</span>
+                  <strong style={{ fontSize: '14px', color: clr.text }}>{parseFloat(headerInfo.total_ht_min || 0).toLocaleString('fr-FR', { minimumFractionDigits: 2 })} MAD</strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', backgroundColor: clr.bg, borderRadius: '10px', border: `1px solid ${clr.border}` }}>
+                  <span style={{ fontSize: '13px', color: clr.textMuted, fontWeight: '500' }}>Total HT Max</span>
+                  <strong style={{ fontSize: '14px', color: clr.text }}>{parseFloat(headerInfo.total_ht_max || 0).toLocaleString('fr-FR', { minimumFractionDigits: 2 })} MAD</strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', backgroundColor: clr.bg, borderRadius: '10px', border: `1px solid ${clr.border}` }}>
+                  <span style={{ fontSize: '13px', color: clr.textMuted, fontWeight: '500' }}>TVA 7%</span>
+                  <strong style={{ fontSize: '14px', color: clr.text }}>{parseFloat(headerInfo.tva_7 || 0).toLocaleString('fr-FR', { minimumFractionDigits: 2 })} MAD</strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', backgroundColor: clr.bg, borderRadius: '10px', border: `1px solid ${clr.border}` }}>
+                  <span style={{ fontSize: '13px', color: clr.textMuted, fontWeight: '500' }}>TVA 10%</span>
+                  <strong style={{ fontSize: '14px', color: clr.text }}>{parseFloat(headerInfo.tva_10 || 0).toLocaleString('fr-FR', { minimumFractionDigits: 2 })} MAD</strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', backgroundColor: clr.bg, borderRadius: '10px', border: `1px solid ${clr.border}` }}>
+                  <span style={{ fontSize: '13px', color: clr.textMuted, fontWeight: '500' }}>TVA 14%</span>
+                  <strong style={{ fontSize: '14px', color: clr.text }}>{parseFloat(headerInfo.tva_14 || 0).toLocaleString('fr-FR', { minimumFractionDigits: 2 })} MAD</strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', backgroundColor: clr.bg, borderRadius: '10px', border: `1px solid ${clr.border}` }}>
+                  <span style={{ fontSize: '13px', color: clr.textMuted, fontWeight: '500' }}>TVA 20%</span>
+                  <strong style={{ fontSize: '14px', color: clr.text }}>{parseFloat(headerInfo.tva_20 || 0).toLocaleString('fr-FR', { minimumFractionDigits: 2 })} MAD</strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', backgroundColor: clr.bg, borderRadius: '10px', border: `1px solid ${clr.border}` }}>
+                  <span style={{ fontSize: '13px', color: clr.textMuted, fontWeight: '500' }}>Total TTC Min</span>
+                  <strong style={{ fontSize: '14px', color: '#0f766e' }}>{parseFloat(headerInfo.total_ttc_min || 0).toLocaleString('fr-FR', { minimumFractionDigits: 2 })} MAD</strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', backgroundColor: clr.bg, borderRadius: '10px', border: `1px solid ${clr.border}` }}>
+                  <span style={{ fontSize: '13px', color: clr.textMuted, fontWeight: '500' }}>Total TTC Max</span>
+                  <strong style={{ fontSize: '14px', color: '#10b981' }}>{parseFloat(headerInfo.total_ttc_max || 0).toLocaleString('fr-FR', { minimumFractionDigits: 2 })} MAD</strong>
+                </div>
+              </div>
+              {/* Amount in Words */}
+              {headerInfo.amount_in_letters && (
+                <div style={{ padding: '14px 18px', backgroundColor: clr.bg, borderRadius: '10px', border: `1px solid ${clr.border}`, borderLeft: `4px solid #0f766e` }}>
+                  <span style={{ fontSize: '12px', color: clr.textMuted, fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px', display: 'block' }}>Montant en lettres</span>
+                  <p style={{ margin: 0, fontSize: '14px', color: clr.text, fontWeight: '600', lineHeight: '1.5', fontStyle: 'italic' }}>{headerInfo.amount_in_letters}</p>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Table Pagination Footer */}
-          <div style={{ 
-            padding: '16px 24px', borderTop: `1.5px solid ${clr.border}`, 
+          <div style={{
+            padding: '16px 24px', borderTop: `1.5px solid ${clr.border}`,
             display: 'flex', flexDirection: isRtl ? 'row-reverse' : 'row', justifyContent: 'space-between', alignItems: 'center',
             flexWrap: 'wrap', gap: '16px'
           }}>
@@ -668,7 +736,7 @@ const BordereauContent = () => {
             </div>
 
             <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
-              <button 
+              <button
                 onClick={() => handlePageChange(currentPage - 1)}
                 disabled={currentPage === 1}
                 className="pagination-btn"
@@ -676,7 +744,7 @@ const BordereauContent = () => {
               >
                 {isRtl ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
               </button>
-              
+
               {/* Show Page Numbers Dynamic */}
               {Array.from({ length: totalPages }, (_, i) => i + 1)
                 .filter(p => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1)
@@ -687,7 +755,7 @@ const BordereauContent = () => {
                   return (
                     <React.Fragment key={p}>
                       {showEllipsis && <span style={{ color: clr.textMuted, margin: '0 4px' }}>...</span>}
-                      <button 
+                      <button
                         onClick={() => handlePageChange(p)}
                         style={{
                           width: '32px',
@@ -711,7 +779,7 @@ const BordereauContent = () => {
                 })
               }
 
-              <button 
+              <button
                 onClick={() => handlePageChange(currentPage + 1)}
                 disabled={currentPage === totalPages}
                 className="pagination-btn"

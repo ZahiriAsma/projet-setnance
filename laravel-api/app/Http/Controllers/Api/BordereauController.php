@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Bordereau;
+use App\Models\BordereauHeader;
 use Illuminate\Http\Request;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use Illuminate\Support\Facades\DB;
@@ -13,6 +14,11 @@ class BordereauController extends Controller
     public function index()
     {
         return response()->json(Bordereau::orderBy('price_number', 'asc')->get());
+    }
+
+    public function header()
+    {
+        return response()->json(BordereauHeader::first());
     }
 
     private function cleanString($str) {
@@ -42,10 +48,112 @@ class BordereauController extends Controller
         try {
             $spreadsheet = IOFactory::load($file->getRealPath());
             $sheet = $spreadsheet->getActiveSheet();
-            $rows = $sheet->toArray(null, true, true, true);
+            $rows = $sheet->toArray(null, true, false, true);
 
             if (empty($rows)) {
                 return response()->json(['error' => 'Le fichier Excel est vide.'], 422);
+            }
+
+            // Detect market name from top rows
+            $marketName = null;
+            for ($rowIndex = 0; $rowIndex < min(20, count($rows)); $rowIndex++) {
+                if (!isset($rows[$rowIndex])) {
+                    continue;
+                }
+                $rowValues = array_values($rows[$rowIndex]);
+                foreach ($rowValues as $cellValue) {
+                    if (!is_string($cellValue)) {
+                        continue;
+                    }
+                    if (stripos($cellValue, 'Lot N°') !== false || stripos($cellValue, 'Lot No') !== false || stripos($cellValue, 'Lot') !== false) {
+                        $marketName = trim($cellValue);
+                        break 2;
+                    }
+                }
+            }
+
+            // Extract footer values from the bottom of the sheet
+            $footerData = [
+                'total_ht_min' => 0,
+                'total_ht_max' => 0,
+                'total_ttc_min' => 0,
+                'total_ttc_max' => 0,
+                'tva_7' => 0,
+                'tva_10' => 0,
+                'tva_14' => 0,
+                'tva_20' => 0,
+                'amount_in_letters' => null,
+            ];
+
+            $rowCount = count($rows);
+            $startFooter = max(0, $rowCount - 50);
+            for ($i = $rowCount - 1; $i >= $startFooter; $i--) {
+                if (!isset($rows[$i])) {
+                    continue;
+                }
+                $rowValues = array_values($rows[$i]);
+                $rowStr = implode(' ', array_filter($rowValues, fn($value) => $value !== null && $value !== false && $value !== ''));
+                $cleanRowStr = mb_strtolower($rowStr);
+
+                if (stripos($cleanRowStr, 'arrêté') !== false || stripos($cleanRowStr, 'arrete') !== false) {
+                    $footerData['amount_in_letters'] = trim($rowStr);
+                }
+
+                $extractNumbers = function(array $values) {
+                    $numbers = [];
+                    foreach ($values as $value) {
+                        if ($value === null || $value === '') {
+                            continue;
+                        }
+                        $text = (string) $value;
+                        $text = preg_replace('/\s+/u', ' ', $text);
+                        $clean = str_replace(["\xc2\xa0", ' ', '\t', '\r', '\n'], '', $text);
+                        $clean = str_replace(',', '.', $clean);
+                        if (preg_match_all('/-?[0-9]+(\.[0-9]+)?/', $clean, $matches)) {
+                            foreach ($matches[0] as $match) {
+                                $numbers[] = floatval($match);
+                            }
+                        }
+                    }
+                    return $numbers;
+                };
+
+                $numbers = $extractNumbers($rowValues);
+                $lastNumber = !empty($numbers) ? end($numbers) : 0;
+
+                if (preg_match('/total.*ht|montant.*ht|ht\b/', $cleanRowStr) && preg_match('/minimum|\bmin\b/', $cleanRowStr)) {
+                    if ($lastNumber > 0) {
+                        $footerData['total_ht_min'] = $lastNumber;
+                    }
+                } elseif (preg_match('/total.*ht|montant.*ht|ht\b/', $cleanRowStr) && preg_match('/maximum|\bmax\b/', $cleanRowStr)) {
+                    if ($lastNumber > 0) {
+                        $footerData['total_ht_max'] = $lastNumber;
+                    }
+                } elseif (preg_match('/total.*ttc|montant.*ttc|ttc\b/', $cleanRowStr) && preg_match('/minimum|\bmin\b/', $cleanRowStr)) {
+                    if ($lastNumber > 0) {
+                        $footerData['total_ttc_min'] = $lastNumber;
+                    }
+                } elseif (preg_match('/total.*ttc|montant.*ttc|ttc\b/', $cleanRowStr) && preg_match('/maximum|\bmax\b/', $cleanRowStr)) {
+                    if ($lastNumber > 0) {
+                        $footerData['total_ttc_max'] = $lastNumber;
+                    }
+                } elseif (preg_match('/tva.*7|7\s*%/', $cleanRowStr)) {
+                    if ($lastNumber > 0 && $lastNumber != 7) {
+                        $footerData['tva_7'] = $lastNumber;
+                    }
+                } elseif (preg_match('/tva.*10|10\s*%/', $cleanRowStr)) {
+                    if ($lastNumber > 0 && $lastNumber != 10) {
+                        $footerData['tva_10'] = $lastNumber;
+                    }
+                } elseif (preg_match('/tva.*14|14\s*%/', $cleanRowStr)) {
+                    if ($lastNumber > 0 && $lastNumber != 14) {
+                        $footerData['tva_14'] = $lastNumber;
+                    }
+                } elseif (preg_match('/tva.*20|20\s*%/', $cleanRowStr)) {
+                    if ($lastNumber > 0 && $lastNumber != 20) {
+                        $footerData['tva_20'] = $lastNumber;
+                    }
+                }
             }
 
             // Scan the first 10 rows to build a robust column mapping and find data start index
@@ -158,6 +266,20 @@ class BordereauController extends Controller
 
             // Delete all old bordereau data
             Bordereau::query()->delete();
+            BordereauHeader::query()->delete();
+
+            BordereauHeader::create([
+                'market_name' => $marketName,
+                'total_ht_min' => $footerData['total_ht_min'],
+                'total_ht_max' => $footerData['total_ht_max'],
+                'total_ttc_min' => $footerData['total_ttc_min'],
+                'total_ttc_max' => $footerData['total_ttc_max'],
+                'tva_7' => $footerData['tva_7'],
+                'tva_10' => $footerData['tva_10'],
+                'tva_14' => $footerData['tva_14'],
+                'tva_20' => $footerData['tva_20'],
+                'amount_in_letters' => $footerData['amount_in_letters'],
+            ]);
 
             $startIndex = $lastHeaderRowIndex !== null ? $lastHeaderRowIndex + 1 : 0;
             $rowNumber = 0;
@@ -189,8 +311,19 @@ class BordereauController extends Controller
 
                 $parseNumber = function($val) {
                     if ($val === null || $val === '') return 0.0;
-                    $val = str_replace(',', '.', trim($val));
-                    $val = str_replace(' ', '', $val);
+                    if (is_numeric($val)) return floatval($val);
+                    $val = trim($val);
+                    $val = preg_replace('/\s+/u', '', $val);
+                    if (preg_match('/\..*,/', $val)) {
+                        $val = str_replace('.', '', $val);
+                        $val = str_replace(',', '.', $val);
+                    } else {
+                        if (substr_count($val, ',') > 1 || preg_match('/,\d{3}/', $val)) {
+                            $val = str_replace(',', '', $val);
+                        } else {
+                            $val = str_replace(',', '.', $val);
+                        }
+                    }
                     preg_match('/-?[0-9]+(\.[0-9]+)?/', $val, $matches);
                     if (!empty($matches[0])) {
                         return floatval($matches[0]);

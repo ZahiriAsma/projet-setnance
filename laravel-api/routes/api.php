@@ -29,6 +29,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Bordereau routes
     Route::get('/bordereau', [\App\Http\Controllers\Api\BordereauController::class, 'index']);
+    Route::get('/bordereau/header', [\App\Http\Controllers\Api\BordereauController::class, 'header']);
     Route::post('/bordereau/import', [\App\Http\Controllers\Api\BordereauController::class, 'import']);
 
     // Factures routes
