@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import {
   LayoutDashboard, FileText, Package, Users, BarChart3, CalendarDays, Settings, LogOut,
-  FileSpreadsheet, AlertTriangle, ArrowRight, ChevronRight, Clock, AlertCircle, TrendingUp, Search, Bell, X
+  FileSpreadsheet, AlertTriangle, ArrowRight, ChevronRight, Clock, AlertCircle, TrendingUp, Search, Bell, X,
+  PieChart as PieChartIcon
 } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart as RechartsPieChart, Pie, Cell } from 'recharts';
 import MarchesContent from './MarchesContent';
 import FournisseursContent from './FournisseursContent';
 import MenusContent from './MenusContent';
@@ -705,7 +706,7 @@ const DashboardPage = () => {
                     <button style={{ backgroundColor: isDark ? '#334155' : '#f1f5f9', border: 'none', padding: '6px 12px', borderRadius: '6px', fontSize: '12px', fontWeight: '600', color: isDark ? '#f1f5f9' : '#475569', cursor: 'pointer', transition: 'all 0.2s' }}>{nt.report}</button>
                   </div>
                   <div style={{ height: '240px', width: '100%' }}>
-                    <ResponsiveContainer width="100%" height="100%">
+                    <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                       <BarChart data={barData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDark ? '#334155' : '#f1f5f9'} />
                         <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: isDark ? '#94a3b8' : '#94a3b8' }} dy={10} />
@@ -722,17 +723,17 @@ const DashboardPage = () => {
                 <div style={{ backgroundColor: clr.card, borderRadius: '16px', padding: '24px', border: `1px solid ${clr.cardBorder}`, boxShadow: '0 1px 2px rgba(0,0,0,0.02)', transition: 'background-color 0.3s, border-color 0.3s' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                     <h3 style={{ margin: 0, fontSize: '15px', fontWeight: '700', color: clr.text, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <PieChart size={18} color="#0f766e" />
+                      <PieChartIcon size={18} color="#0f766e" />
                       {nt.budgetDistribution}
                     </h3>
                   </div>
                   <div style={{ height: '180px', width: '100%', position: 'relative' }}>
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
+                    <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+                      <RechartsPieChart>
                         <Pie data={pieData} cx="50%" cy="50%" innerRadius={50} outerRadius={70} paddingAngle={2} dataKey="value" stroke="none">
                           {pieData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}
                         </Pie>
-                      </PieChart>
+                      </RechartsPieChart>
                     </ResponsiveContainer>
                     <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center' }}>
                       <div style={{ fontSize: '18px', fontWeight: '800', color: clr.text }}>842K</div>

@@ -33,4 +33,9 @@ class BonLivraison extends Model
     {
         return $this->belongsTo(Fournisseur::class, 'fournisseur_id');
     }
+
+    public function attachmentsBc()
+    {
+        return $this->hasMany(AttachmentBc::class, 'bon_livraison_id');
+    }
 }

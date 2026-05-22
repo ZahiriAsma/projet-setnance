@@ -18,4 +18,24 @@ api.interceptors.request.use((config) => {
     return config;
 });
 
+// Interceptor to handle 401 Unauthorized errors
+api.interceptors.response.use(
+    (response) => response,
+    (error) => {
+        if (error.response && error.response.status === 401) {
+            // Clear tokens
+            localStorage.removeItem('auth_token');
+            localStorage.removeItem('user');
+            sessionStorage.removeItem('auth_token');
+            sessionStorage.removeItem('user');
+            
+            // Redirect to login page if we aren't already there
+            if (window.location.pathname !== '/') {
+                window.location.href = '/';
+            }
+        }
+        return Promise.reject(error);
+    }
+);
+
 export default api;

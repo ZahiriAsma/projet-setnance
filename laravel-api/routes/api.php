@@ -33,5 +33,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Factures routes
     Route::apiResource('factures', \App\Http\Controllers\FactureController::class);
-});
 
+    // Attachment BC routes
+    Route::get('/bons-livraison/{id}/attachments-bc/export', [\App\Http\Controllers\Api\AttachmentBcController::class, 'export']);
+    Route::apiResource('attachments-bc', \App\Http\Controllers\Api\AttachmentBcController::class);
+});
