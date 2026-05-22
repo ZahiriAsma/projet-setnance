@@ -21,6 +21,7 @@ class BonLivraison extends Model
         'total_ht',
         'total_tva',
         'total_ttc',
+        'type',
         'items',
         'statut'
     ];

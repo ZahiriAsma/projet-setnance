@@ -25,6 +25,7 @@ class BonCommande extends Model
         'montantTVA',
         'montantTTC',
         'statut',
+        'type',
         'fournisseur_id',
         'items'
     ];

@@ -82,6 +82,7 @@ const MarchesContent = () => {
     montantTVA: '0.00',
     montantTTC: '0.00',
     statut: 'En cours',
+    type: '',
     fournisseur_id: '',
     items: []
   });
@@ -105,6 +106,7 @@ const MarchesContent = () => {
     montantTVA: '0.00',
     montantTTC: '0.00',
     statut: 'En cours',
+    type: '',
     fournisseur_id: '',
     items: []
   });
@@ -236,9 +238,13 @@ const MarchesContent = () => {
     }
   };
 
-  const fetchBordereauItems = async () => {
+  const fetchBordereauItems = async (type = null) => {
     try {
-      const response = await api.get('/bordereau');
+      let url = '/bordereau';
+      if (type) {
+        url += `?type=${encodeURIComponent(type)}`;
+      }
+      const response = await api.get(url);
       setBordereauItems(response.data);
     } catch (error) {
       console.error('Erreur lors du chargement du bordereau', error);
@@ -515,6 +521,7 @@ const MarchesContent = () => {
         montantTVA: '0.00',
         montantTTC: '0.00',
         statut: 'En cours',
+        type: '',
         fournisseur_id: '',
         items: []
       });
@@ -805,6 +812,7 @@ const MarchesContent = () => {
         total_ht: parseFloat(newBlData.montantHT),
         total_tva: parseFloat(newBlData.montantTVA),
         total_ttc: parseFloat(newBlData.montantTTC),
+        type: newBlData.type,
         items: newBlData.items,
         statut: newBlData.statut
       };
@@ -819,6 +827,23 @@ const MarchesContent = () => {
         const mapped = mapBlFromApi(response.data);
         setBls([...bls, mapped]);
       }
+      setNewBlData({
+        numeroBL: '',
+        dateLivraison: new Date().toISOString().split('T')[0],
+        exercice: new Date().getFullYear(),
+        rubrique: 'ACHAT PRODUITS ALIMENTAIRES',
+        referenceBCs: [],
+        lieuLivraison: 'Internat OFPPT Casablanca',
+        conditionsGenerales: 'Livraison sous 5 jours. Paiement à 60 jours.',
+        conditionsParticulieres: '',
+        montantHT: '0.00',
+        montantTVA: '0.00',
+        montantTTC: '0.00',
+        statut: 'En cours',
+        type: '',
+        fournisseur_id: '',
+        items: []
+      });
       setShowBlModal(false);
     } catch (error) {
       console.error("Erreur lors de la sauvegarde du bon de livraison", error.response || error);
@@ -1112,6 +1137,7 @@ const MarchesContent = () => {
                                 montantTVA: bc.montantTVA || '0.00',
                                 montantTTC: bc.montantTTC || '0.00',
                                 statut: bc.statut || 'En cours',
+                                type: bc.type || '',
                                 fournisseur_id: bc.fournisseur_id ? bc.fournisseur_id.toString() : '',
                                 items: Array.isArray(bc.items) ? bc.items : []
                               });
@@ -1286,6 +1312,7 @@ const MarchesContent = () => {
                                 montantTVA: bl.montantTVA || '0.00',
                                 montantTTC: bl.montantTTC || '0.00',
                                 statut: bl.statut || 'En cours',
+                                type: bl.type || '',
                                 fournisseur_id: bl.fournisseur_id || '',
                                 items: bl.items || []
                               });
@@ -1850,8 +1877,27 @@ const MarchesContent = () => {
 
   const filteredSuggestions = productSearch.trim() === '' ? [] : bordereauItems.filter(item => {
     const q = productSearch.toLowerCase();
-    return (item.price_number && item.price_number.toString().toLowerCase().includes(q)) ||
+    
+    // Filtre par texte
+    const matchesText = (item.price_number && item.price_number.toString().toLowerCase().includes(q)) ||
       (item.service_description && item.service_description.toLowerCase().includes(q));
+    
+    if (!matchesText) return false;
+    
+    // Filtre par type - récupérer le type courant en fonction de la modale ouverte
+    let currentType = null;
+    if (showBcModal) {
+      currentType = newBcData.type;
+    } else if (showBlModal) {
+      currentType = newBlData.type;
+    }
+    
+    // Si un type est spécifié, filtrer les produits par type
+    if (currentType && item.type && item.type.toLowerCase() !== currentType.toLowerCase()) {
+      return false;
+    }
+    
+    return true;
   });
 
   return (
@@ -2355,6 +2401,16 @@ const MarchesContent = () => {
                     <option value="Livré">Livré</option>
                   </select>
                 </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>Type de produit (gaz, pain, etc.)</label>
+                  <input
+                    type="text"
+                    value={newBcData.type}
+                    onChange={(e) => setNewBcData({ ...newBcData, type: e.target.value })}
+                    style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '13px', color: '#334155' }}
+                    placeholder="Ex: gaz, pain, farine, etc."
+                  />
+                </div>
               </div>
 
               {/* Added Products Table */}
@@ -2629,9 +2685,14 @@ const MarchesContent = () => {
                   <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>Client / Établissement</label>
                   <input
                     type="text"
-                    value={newBlData.lieuLivraison}
-                    onChange={(e) => setNewBlData({ ...newBlData, lieuLivraison: e.target.value })}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>Type de produit (gaz, pain, etc.)</label>
+                  <input
+                    type="text"
+                    value={newBlData.type}
+                    onChange={(e) => setNewBlData({ ...newBlData, type: e.target.value })}
                     style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '13px', color: '#334155', boxSizing: 'border-box' }}
+                    placeholder="Ex: gaz, pain, farine, etc."
                   />
                 </div>
               </div>

@@ -11,9 +11,23 @@ use Illuminate\Support\Facades\DB;
 
 class BordereauController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        return response()->json(Bordereau::orderBy('price_number', 'asc')->get());
+        $query = Bordereau::orderBy('price_number', 'asc');
+        
+        // Filtrer par type si fourni en paramètre
+        if ($request->has('type') && $request->input('type')) {
+            $type = $request->input('type');
+            $query->where('type', $type);
+        }
+        
+        // Filtrer par marche_type si fourni en paramètre
+        if ($request->has('marche_type') && $request->input('marche_type')) {
+            $marchetype = $request->input('marche_type');
+            $query->where('marche_type', $marchetype);
+        }
+        
+        return response()->json($query->get());
     }
 
     public function header()

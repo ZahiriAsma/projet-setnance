@@ -13,6 +13,8 @@ class Bordereau extends Model
 
     protected $fillable = [
         'price_number',
+        'type',
+        'marche_type',
         'service_description',
         'unit_of_measure',
         'unit_price_ht',
