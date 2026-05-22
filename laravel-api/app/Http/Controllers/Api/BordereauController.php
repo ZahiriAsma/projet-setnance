@@ -13,6 +13,7 @@ class BordereauController extends Controller
 {
     public function index(Request $request)
     {
+<<<<<<< HEAD
         $query = Bordereau::orderBy('price_number', 'asc');
         
         // Filtrer par type si fourni en paramètre
@@ -28,11 +29,29 @@ class BordereauController extends Controller
         }
         
         return response()->json($query->get());
+=======
+        return response()->json(BordereauHeader::withSum('bordereaux', 'maximum_total_price_ttc')
+            ->withSum('bordereaux', 'minimum_total_price_ttc')
+            ->orderBy('created_at', 'desc')
+            ->get());
+>>>>>>> dece708 (modifier le projet 1)
     }
 
-    public function header()
+    public function show($id)
     {
-        return response()->json(BordereauHeader::first());
+        $header = BordereauHeader::findOrFail($id);
+        $items = $header->bordereaux()->orderBy('price_number', 'asc')->get();
+        return response()->json([
+            'header' => $header,
+            'items' => $items
+        ]);
+    }
+
+    public function destroy($id)
+    {
+        $header = BordereauHeader::findOrFail($id);
+        $header->delete();
+        return response()->json(['message' => 'Bordereau supprimé avec succès']);
     }
 
     private function cleanString($str) {
@@ -170,17 +189,23 @@ class BordereauController extends Controller
                 }
             }
 
-            // Scan the first 10 rows to build a robust column mapping and find data start index
+            // Scan the first 25 rows to build a robust column mapping and find data start index
             $mapping = [];
             $lastHeaderRowIndex = null;
 
-            for ($rowIndex = 0; $rowIndex < min(10, count($rows)); $rowIndex++) {
+            for ($rowIndex = 0; $rowIndex < min(25, count($rows)); $rowIndex++) {
                 if (!isset($rows[$rowIndex])) continue;
                 $row = $rows[$rowIndex];
 
-                // If the first cell of the row is numeric, it is a data row. Stop header scanning immediately!
-                $firstCell = reset($row);
-                if ($firstCell !== null && is_numeric(trim($firstCell))) {
+                // If the first non-empty cell of the row is numeric, it is a data row — stop scanning
+                $firstCell = null;
+                foreach ($row as $cell) {
+                    if ($cell !== null && $cell !== '') {
+                        $firstCell = $cell;
+                        break;
+                    }
+                }
+                if ($firstCell !== null && is_numeric(trim((string)$firstCell))) {
                     break;
                 }
 
@@ -191,20 +216,32 @@ class BordereauController extends Controller
                     if ($cellValue === null || $cellValue === '') continue;
                     $valClean = $this->cleanString($cellValue);
 
-                    // Check if this looks like a header cell
+                    // Extended keyword list for all types of bordereaux
                     $isHeaderKeyword = false;
                     if (
                         str_contains($valClean, 'prix') ||
                         str_contains($valClean, 'designation') ||
+                        str_contains($valClean, 'designation') ||
+                        str_contains($valClean, 'libelle') ||
+                        str_contains($valClean, 'article') ||
+                        str_contains($valClean, 'nature') ||
+                        str_contains($valClean, 'produit') ||
                         str_contains($valClean, 'unite') ||
                         str_contains($valClean, 'tva') ||
+                        str_contains($valClean, 'taxe') ||
                         str_contains($valClean, 'quantite') ||
                         str_contains($valClean, 'qte') ||
+                        str_contains($valClean, 'qmin') ||
+                        str_contains($valClean, 'qmax') ||
+                        str_contains($valClean, 'nombre') ||
                         str_contains($valClean, 'description') ||
                         str_contains($valClean, 'prestation') ||
                         str_contains($valClean, 'minimale') ||
                         str_contains($valClean, 'maximale') ||
-                        str_contains($valClean, 'unitaire')
+                        str_contains($valClean, 'unitaire') ||
+                        str_contains($valClean, 'reference') ||
+                        str_contains($valClean, 'numero') ||
+                        str_contains($valClean, 'montant')
                     ) {
                         $isHeaderKeyword = true;
                         $headerMatchesCount++;
@@ -213,62 +250,110 @@ class BordereauController extends Controller
                     if ($isHeaderKeyword) {
                         $matchedInRow = true;
 
-                        // Map fields if not already set
+                        // N° Prix : numéro / référence / code produit
                         if (!isset($mapping['price_number'])) {
-                            if (str_contains($valClean, 'prix') && (str_contains($valClean, 'n') || str_contains($valClean, 'num') || str_contains($valClean, 'no') || str_contains($valClean, 'code')) && !str_contains($valClean, 'unitaire') && !str_contains($valClean, 'total')) {
+                            if (
+                                (str_contains($valClean, 'prix') && (str_contains($valClean, 'n') || str_contains($valClean, 'num') || str_contains($valClean, 'no') || str_contains($valClean, 'code')) && !str_contains($valClean, 'unitaire') && !str_contains($valClean, 'total')) ||
+                                (str_contains($valClean, 'numero') && !str_contains($valClean, 'tva') && !str_contains($valClean, 'montant')) ||
+                                $valClean === 'n' || $valClean === 'no' || $valClean === 'num' || $valClean === 'ref' || $valClean === 'reference' || $valClean === 'code'
+                            ) {
                                 $mapping['price_number'] = $colLetter;
                             }
                         }
+
+                        // Désignation / libellé / article / produit
                         if (!isset($mapping['service_description'])) {
-                            if (str_contains($valClean, 'designation') || str_contains($valClean, 'description') || str_contains($valClean, 'prestation')) {
+                            if (
+                                str_contains($valClean, 'designation') ||
+                                str_contains($valClean, 'description') ||
+                                str_contains($valClean, 'prestation') ||
+                                str_contains($valClean, 'libelle') ||
+                                str_contains($valClean, 'article') ||
+                                str_contains($valClean, 'nature') ||
+                                str_contains($valClean, 'produit')
+                            ) {
                                 $mapping['service_description'] = $colLetter;
                             }
                         }
+
+                        // Unité de mesure
                         if (!isset($mapping['unit_of_measure'])) {
-                            if (str_contains($valClean, 'unite') || str_contains($valClean, 'um') || str_contains($valClean, 'mesure')) {
+                            if (str_contains($valClean, 'unite') || str_contains($valClean, 'um') || str_contains($valClean, 'mesure') || $valClean === 'u') {
                                 $mapping['unit_of_measure'] = $colLetter;
                             }
                         }
+
+                        // Taux TVA
                         if (!isset($mapping['vat_rate'])) {
-                            if (str_contains($valClean, 'tva') && !str_contains($valClean, 'montant') && !str_contains($valClean, 'total') && !str_contains($valClean, 'prix')) {
+                            if (
+                                (str_contains($valClean, 'tva') || str_contains($valClean, 'taxe')) &&
+                                !str_contains($valClean, 'montant') && !str_contains($valClean, 'total') && !str_contains($valClean, 'prix')
+                            ) {
                                 $mapping['vat_rate'] = $colLetter;
                             }
                         }
+
+                        // Prix unitaire HT
                         if (!isset($mapping['unit_price_ht'])) {
-                            if (str_contains($valClean, 'unitaire') || str_contains($valClean, 'pu') || $valClean === 'prix') {
+                            if (
+                                str_contains($valClean, 'unitaire') ||
+                                $valClean === 'pu' || $valClean === 'puht' ||
+                                $valClean === 'prix' ||
+                                (str_contains($valClean, 'prix') && str_contains($valClean, 'ht'))
+                            ) {
                                 $mapping['unit_price_ht'] = $colLetter;
                             }
                         }
+
+                        // Quantité minimale
                         if (!isset($mapping['minimum_quantity'])) {
-                            if (str_contains($valClean, 'min') && !str_contains($valClean, 'total') && !str_contains($valClean, 'prix') && !str_contains($valClean, 'tva') && !str_contains($valClean, 'hors')) {
+                            if (
+                                (str_contains($valClean, 'min') && !str_contains($valClean, 'total') && !str_contains($valClean, 'prix') && !str_contains($valClean, 'tva') && !str_contains($valClean, 'hors') && !str_contains($valClean, 'montant')) ||
+                                $valClean === 'qmin' || $valClean === 'qtemin' || $valClean === 'qtmin'
+                            ) {
                                 $mapping['minimum_quantity'] = $colLetter;
                             }
                         }
+
+                        // Quantité maximale
                         if (!isset($mapping['maximum_quantity'])) {
-                            if (str_contains($valClean, 'max') && !str_contains($valClean, 'total') && !str_contains($valClean, 'prix') && !str_contains($valClean, 'tva') && !str_contains($valClean, 'hors')) {
+                            if (
+                                (str_contains($valClean, 'max') && !str_contains($valClean, 'total') && !str_contains($valClean, 'prix') && !str_contains($valClean, 'tva') && !str_contains($valClean, 'hors') && !str_contains($valClean, 'montant')) ||
+                                $valClean === 'qmax' || $valClean === 'qtemax' || $valClean === 'qtmax'
+                            ) {
                                 $mapping['maximum_quantity'] = $colLetter;
                             }
                         }
                     }
                 }
 
-                // A row is only considered a header row if it matches at least 2 distinct keywords
-                if ($matchedInRow && $headerMatchesCount >= 2) {
+                // Relaxed: a row is considered header if it matches at least 1 keyword
+                if ($matchedInRow && $headerMatchesCount >= 1) {
                     $lastHeaderRowIndex = $rowIndex;
                 }
             }
 
-            // Fallback sequential mapping if dynamic headers mapped less than 4 columns
-            if (count($mapping) < 4) {
+            // Log mapping for debugging
+            \Illuminate\Support\Facades\Log::info('Bordereau import mapping: ' . json_encode($mapping) . ' | lastHeaderRow: ' . $lastHeaderRowIndex);
+
+            // Fallback sequential mapping if dynamic headers mapped less than 3 columns
+            if (count($mapping) < 3) {
                 $mapping = [];
-                $firstRow = reset($rows);
-                $letters = array_keys($firstRow);
-                $cols = [
-                    'price_number', 'service_description', 'unit_of_measure', 'minimum_quantity', 'maximum_quantity', 'vat_rate', 'unit_price_ht'
-                ];
-                foreach ($cols as $idx => $colName) {
-                    if (isset($letters[$idx])) {
-                        $mapping[$colName] = $letters[$idx];
+                // Find the first row that has at least 4 non-empty cells — likely the header row
+                foreach ($rows as $rIdx => $rRow) {
+                    $nonEmpty = array_filter($rRow, fn($v) => $v !== null && $v !== '');
+                    if (count($nonEmpty) >= 4) {
+                        $lastHeaderRowIndex = $rIdx;
+                        $letters = array_keys($rRow);
+                        $cols = [
+                            'price_number', 'service_description', 'unit_of_measure', 'minimum_quantity', 'maximum_quantity', 'vat_rate', 'unit_price_ht'
+                        ];
+                        foreach ($cols as $idx => $colName) {
+                            if (isset($letters[$idx])) {
+                                $mapping[$colName] = $letters[$idx];
+                            }
+                        }
+                        break;
                     }
                 }
             }
@@ -278,22 +363,36 @@ class BordereauController extends Controller
 
             DB::beginTransaction();
 
-            // Delete all old bordereau data
-            Bordereau::query()->delete();
-            BordereauHeader::query()->delete();
+            $header = BordereauHeader::where('market_name', $marketName)->first();
 
-            BordereauHeader::create([
-                'market_name' => $marketName,
-                'total_ht_min' => $footerData['total_ht_min'],
-                'total_ht_max' => $footerData['total_ht_max'],
-                'total_ttc_min' => $footerData['total_ttc_min'],
-                'total_ttc_max' => $footerData['total_ttc_max'],
-                'tva_7' => $footerData['tva_7'],
-                'tva_10' => $footerData['tva_10'],
-                'tva_14' => $footerData['tva_14'],
-                'tva_20' => $footerData['tva_20'],
-                'amount_in_letters' => $footerData['amount_in_letters'],
-            ]);
+            if ($header) {
+                // Delete existing items for this market
+                $header->bordereaux()->delete();
+                $header->update([
+                    'total_ht_min' => $footerData['total_ht_min'],
+                    'total_ht_max' => $footerData['total_ht_max'],
+                    'total_ttc_min' => $footerData['total_ttc_min'],
+                    'total_ttc_max' => $footerData['total_ttc_max'],
+                    'tva_7' => $footerData['tva_7'],
+                    'tva_10' => $footerData['tva_10'],
+                    'tva_14' => $footerData['tva_14'],
+                    'tva_20' => $footerData['tva_20'],
+                    'amount_in_letters' => $footerData['amount_in_letters'],
+                ]);
+            } else {
+                $header = BordereauHeader::create([
+                    'market_name' => $marketName,
+                    'total_ht_min' => $footerData['total_ht_min'],
+                    'total_ht_max' => $footerData['total_ht_max'],
+                    'total_ttc_min' => $footerData['total_ttc_min'],
+                    'total_ttc_max' => $footerData['total_ttc_max'],
+                    'tva_7' => $footerData['tva_7'],
+                    'tva_10' => $footerData['tva_10'],
+                    'tva_14' => $footerData['tva_14'],
+                    'tva_20' => $footerData['tva_20'],
+                    'amount_in_letters' => $footerData['amount_in_letters'],
+                ]);
+            }
 
             $startIndex = $lastHeaderRowIndex !== null ? $lastHeaderRowIndex + 1 : 0;
             $rowNumber = 0;
@@ -347,6 +446,12 @@ class BordereauController extends Controller
 
                 $unitPrice = isset($mapping['unit_price_ht']) ? $parseNumber($row[$mapping['unit_price_ht']]) : 0.0;
                 $vatRate = isset($mapping['vat_rate']) ? $parseNumber($row[$mapping['vat_rate']]) : 0.0;
+                
+                // Si la TVA est lue comme 0.20 (format pourcentage d'Excel), la convertir en 20
+                if ($vatRate > 0 && $vatRate <= 1) {
+                    $vatRate = $vatRate * 100;
+                }
+
                 $minQty = isset($mapping['minimum_quantity']) ? $parseNumber($row[$mapping['minimum_quantity']]) : 0.0;
                 $maxQty = isset($mapping['maximum_quantity']) ? $parseNumber($row[$mapping['maximum_quantity']]) : 0.0;
 
@@ -365,6 +470,7 @@ class BordereauController extends Controller
                 $maxTotalTtc = $maxTotalHt + $maxVat;
 
                 $record = [
+                    'bordereau_header_id' => $header->id,
                     'price_number' => $priceNumber,
                     'service_description' => $description,
                     'unit_of_measure' => isset($mapping['unit_of_measure']) ? trim($row[$mapping['unit_of_measure']]) : null,

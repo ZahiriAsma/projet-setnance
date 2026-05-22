@@ -21,4 +21,9 @@ class BordereauHeader extends Model
         'tva_20',
         'amount_in_letters',
     ];
+
+    public function bordereaux()
+    {
+        return $this->hasMany(Bordereau::class, 'bordereau_header_id');
+    }
 }

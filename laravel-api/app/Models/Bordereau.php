@@ -12,6 +12,7 @@ class Bordereau extends Model
     protected $table = 'bordereau';
 
     protected $fillable = [
+        'bordereau_header_id',
         'price_number',
         'type',
         'marche_type',
@@ -30,4 +31,9 @@ class Bordereau extends Model
         'current_quantity',
         'alert_threshold'
     ];
+
+    public function header()
+    {
+        return $this->belongsTo(BordereauHeader::class, 'bordereau_header_id');
+    }
 }
