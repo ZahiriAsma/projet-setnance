@@ -89,6 +89,7 @@ const MarchesContent = () => {
   const [editingBc, setEditingBc] = useState(null);
   const [selectedBcForView, setSelectedBcForView] = useState(null);
   const [bordereauItems, setBordereauItems] = useState([]);
+  const [bordereauHeaders, setBordereauHeaders] = useState([]);
 
   // Dynamic state for Bons de livraison documents
   const [bls, setBls] = useState([]);
@@ -225,6 +226,7 @@ const MarchesContent = () => {
     fetchBcs();
     fetchFactures();
     fetchBordereauItems();
+    fetchBordereauHeaders();
     fetchBls();
   }, []);
 
@@ -238,11 +240,20 @@ const MarchesContent = () => {
     }
   };
 
+  const fetchBordereauHeaders = async () => {
+    try {
+      const response = await api.get('/bordereau');
+      setBordereauHeaders(response.data);
+    } catch (error) {
+      console.error('Erreur lors du chargement des bordereaux importés', error);
+    }
+  };
+
   const fetchBordereauItems = async (type = null) => {
     try {
-      let url = '/bordereau';
+      let url = '/bordereau?items=true';
       if (type) {
-        url += `?type=${encodeURIComponent(type)}`;
+        url += `&type=${encodeURIComponent(type)}`;
       }
       const response = await api.get(url);
       setBordereauItems(response.data);
@@ -342,7 +353,19 @@ const MarchesContent = () => {
     e.preventDefault();
     setSubmitting(true);
     try {
-      await api.post('/marches', formData);
+      // Fetch selected bordereau max amount for the budget
+      const selectedBordereau = bordereauHeaders.find(b => (b.market_name || `Bordereau #${b.id}`) === formData.titulaire);
+      const budgetMax = selectedBordereau 
+        ? parseFloat(selectedBordereau.bordereaux_sum_maximum_total_price_ttc ?? selectedBordereau.total_ttc_max ?? 0) 
+        : 0;
+
+      const payload = {
+        ...formData,
+        budget: budgetMax,
+        consomme: 0
+      };
+
+      await api.post('/marches', payload);
       setShowModal(false);
       setFormData({ titulaire: '', id_fournisseur: fournisseurs[0]?.id?.toString() || '', date_debut: '', date_fin: '' });
       fetchMarches(); // Refresh
@@ -2199,13 +2222,43 @@ const MarchesContent = () => {
 
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#475569', marginBottom: '6px' }}>Titulaire du marché</label>
-                <input
-                  type="text" name="titulaire" value={formData.titulaire} onChange={handleInputChange} required
-                  style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none' }}
-                  placeholder="Ex: Denrées alimentaires"
-                />
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#475569', marginBottom: '6px' }}>Bordereau importé (Titulaire) *</label>
+                <select
+                  name="titulaire"
+                  value={formData.titulaire}
+                  onChange={handleInputChange}
+                  required
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none', backgroundColor: 'white' }}
+                >
+                  <option value="" disabled>-- Sélectionner un bordereau importé --</option>
+                  {bordereauHeaders.map(b => (
+                    <option key={b.id} value={b.market_name || `Bordereau #${b.id}`}>
+                      {b.market_name || `Bordereau #${b.id}`}
+                    </option>
+                  ))}
+                </select>
               </div>
+
+              {(() => {
+                const selectedBordereau = bordereauHeaders.find(b => (b.market_name || `Bordereau #${b.id}`) === formData.titulaire);
+                if (!selectedBordereau) return null;
+                return (
+                  <div style={{ backgroundColor: '#f8fafc', padding: '12px 16px', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '13px', color: '#475569', marginTop: '-4px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                      <span style={{ fontWeight: '600' }}>Date d'import :</span>
+                      <span>{new Date(selectedBordereau.created_at).toLocaleDateString('fr-FR')}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                      <span style={{ fontWeight: '600' }}>Total TTC Minimum :</span>
+                      <span style={{ color: '#0f766e', fontWeight: '700' }}>{parseFloat(selectedBordereau.bordereaux_sum_minimum_total_price_ttc ?? selectedBordereau.total_ttc_min ?? 0).toLocaleString('fr-FR', { minimumFractionDigits: 2 })} MAD</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ fontWeight: '600' }}>Total TTC Maximum :</span>
+                      <span style={{ color: '#10b981', fontWeight: '700' }}>{parseFloat(selectedBordereau.bordereaux_sum_maximum_total_price_ttc ?? selectedBordereau.total_ttc_max ?? 0).toLocaleString('fr-FR', { minimumFractionDigits: 2 })} MAD</span>
+                    </div>
+                  </div>
+                );
+              })()}
 
               <div>
                 <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#475569', marginBottom: '6px' }}>Fournisseur *</label>

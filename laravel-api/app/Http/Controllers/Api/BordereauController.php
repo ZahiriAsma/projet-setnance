@@ -13,8 +13,8 @@ class BordereauController extends Controller
 {
     public function index(Request $request)
     {
-        // If 'type' or 'marche_type' filter is provided, return flat Bordereau items
-        if ($request->has('type') || $request->has('marche_type')) {
+        // If 'items', 'type' or 'marche_type' filter is provided, return flat Bordereau items
+        if ($request->has('items') || $request->has('type') || $request->has('marche_type')) {
             $query = Bordereau::orderBy('price_number', 'asc');
             
             if ($request->has('type') && $request->input('type')) {

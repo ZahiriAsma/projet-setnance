@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import api from '../api/axios';
 import { useDashboard } from '../context/DashboardContext';
+import { NumberToLetter } from '../utils/numberToLetters';
 
 const T = {
   fr: {
@@ -259,7 +260,12 @@ const BordereauContent = () => {
     let totalHtMax = 0;
     let totalTtcMin = 0;
     let totalTtcMax = 0;
-    const tvaGroups = {};
+    const tvaGroups = {
+      7: 0,
+      10: 0,
+      14: 0,
+      20: 0
+    };
 
     items.forEach(item => {
       totalHtMin += parseFloat(item.minimum_total_price_ht || 0);
@@ -267,7 +273,10 @@ const BordereauContent = () => {
       totalTtcMin += parseFloat(item.minimum_total_price_ttc || 0);
       totalTtcMax += parseFloat(item.maximum_total_price_ttc || 0);
 
-      const vatRate = parseFloat(item.vat_rate || 0);
+      let vatRate = parseFloat(item.vat_rate || 0);
+      if (vatRate > 0 && vatRate <= 1) {
+        vatRate = vatRate * 100;
+      }
       if (vatRate > 0) {
         if (!tvaGroups[vatRate]) tvaGroups[vatRate] = 0;
         // As per requirement, sum the VAT amount. Using maximum_vat_amount as typical representation.
@@ -504,7 +513,7 @@ const BordereauContent = () => {
                       <td style={{ padding: '14px 20px', fontWeight: '500' }}>{item.service_description}</td>
                       <td style={{ padding: '14px 20px', textAlign: 'center' }}>{item.unit_of_measure || '-'}</td>
                       <td style={{ padding: '14px 20px', textAlign: 'right', fontWeight: '700' }}>{parseFloat(item.unit_price_ht || 0).toLocaleString('fr-FR', { minimumFractionDigits: 2 })}</td>
-                      <td style={{ padding: '14px 20px', textAlign: 'right' }}>{item.vat_rate}%</td>
+                      <td style={{ padding: '14px 20px', textAlign: 'right' }}>{(parseFloat(item.vat_rate || 0) > 0 && parseFloat(item.vat_rate || 0) <= 1) ? (parseFloat(item.vat_rate || 0) * 100) : item.vat_rate}%</td>
                       <td style={{ padding: '14px 20px', textAlign: 'right', color: clr.textMuted }}>{parseFloat(item.minimum_quantity || 0).toLocaleString('fr-FR')}</td>
                       <td style={{ padding: '14px 20px', textAlign: 'right', color: clr.textMuted }}>{parseFloat(item.maximum_quantity || 0).toLocaleString('fr-FR')}</td>
                       <td style={{ padding: '14px 20px', textAlign: 'right', fontWeight: '700' }}>{parseFloat(item.minimum_total_price_ht || 0).toLocaleString('fr-FR', { minimumFractionDigits: 2 })}</td>
@@ -545,9 +554,26 @@ const BordereauContent = () => {
                     <strong style={{ fontSize: '14px', color: '#10b981' }}>{calculatedTotals.totalTtcMax.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} MAD</strong>
                   </div>
                 </div>
-                {headerInfo.amount_in_letters && (
+                
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '4px' }}>
                   <div style={{ padding: '14px 18px', backgroundColor: clr.bg, borderRadius: '10px', border: `1px solid ${clr.border}`, borderLeft: `4px solid #0f766e` }}>
-                    <span style={{ fontSize: '12px', color: clr.textMuted, fontWeight: '600', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Montant en lettres</span>
+                    <span style={{ fontSize: '12px', color: clr.textMuted, fontWeight: '600', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>MINIMUM</span>
+                    <p style={{ margin: 0, fontSize: '14px', color: clr.text, fontWeight: '600', fontStyle: 'italic' }}>
+                      Arrêté le présent bordereau minimum à la somme de : {NumberToLetter(calculatedTotals.totalTtcMin)}
+                    </p>
+                  </div>
+                  
+                  <div style={{ padding: '14px 18px', backgroundColor: clr.bg, borderRadius: '10px', border: `1px solid ${clr.border}`, borderLeft: `4px solid #10b981` }}>
+                    <span style={{ fontSize: '12px', color: clr.textMuted, fontWeight: '600', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>MAXIMUM</span>
+                    <p style={{ margin: 0, fontSize: '14px', color: clr.text, fontWeight: '600', fontStyle: 'italic' }}>
+                      Arrêté le présent bordereau maximum à la somme de : {NumberToLetter(calculatedTotals.totalTtcMax)}
+                    </p>
+                  </div>
+                </div>
+
+                {headerInfo.amount_in_letters && (
+                  <div style={{ padding: '14px 18px', backgroundColor: clr.bg, borderRadius: '10px', border: `1px solid ${clr.border}`, borderLeft: `4px solid #64748b` }}>
+                    <span style={{ fontSize: '12px', color: clr.textMuted, fontWeight: '600', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Montant en lettres (Original Excel)</span>
                     <p style={{ margin: 0, fontSize: '14px', color: clr.text, fontWeight: '600', fontStyle: 'italic' }}>{headerInfo.amount_in_letters}</p>
                   </div>
                 )}
