@@ -2685,6 +2685,11 @@ const MarchesContent = () => {
                   <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>Client / Établissement</label>
                   <input
                     type="text"
+                    value={newBlData.lieuLivraison || ''}
+                    onChange={(e) => setNewBlData({ ...newBlData, lieuLivraison: e.target.value })}
+                    style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '13px', color: '#334155', boxSizing: 'border-box' }}
+                  />
+                </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>Type de produit (gaz, pain, etc.)</label>
                   <input

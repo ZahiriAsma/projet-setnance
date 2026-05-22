@@ -13,28 +13,26 @@ class BordereauController extends Controller
 {
     public function index(Request $request)
     {
-<<<<<<< HEAD
-        $query = Bordereau::orderBy('price_number', 'asc');
-        
-        // Filtrer par type si fourni en paramètre
-        if ($request->has('type') && $request->input('type')) {
-            $type = $request->input('type');
-            $query->where('type', $type);
+        // If 'type' or 'marche_type' filter is provided, return flat Bordereau items
+        if ($request->has('type') || $request->has('marche_type')) {
+            $query = Bordereau::orderBy('price_number', 'asc');
+            
+            if ($request->has('type') && $request->input('type')) {
+                $query->where('type', $request->input('type'));
+            }
+            
+            if ($request->has('marche_type') && $request->input('marche_type')) {
+                $query->where('marche_type', $request->input('marche_type'));
+            }
+            
+            return response()->json($query->get());
         }
-        
-        // Filtrer par marche_type si fourni en paramètre
-        if ($request->has('marche_type') && $request->input('marche_type')) {
-            $marchetype = $request->input('marche_type');
-            $query->where('marche_type', $marchetype);
-        }
-        
-        return response()->json($query->get());
-=======
+
+        // Default: return BordereauHeaders with aggregated sums
         return response()->json(BordereauHeader::withSum('bordereaux', 'maximum_total_price_ttc')
             ->withSum('bordereaux', 'minimum_total_price_ttc')
             ->orderBy('created_at', 'desc')
             ->get());
->>>>>>> dece708 (modifier le projet 1)
     }
 
     public function show($id)
@@ -334,6 +332,11 @@ class BordereauController extends Controller
             }
 
             // Log mapping for debugging
+            // If price_number was not detected, default to column A
+            if (!isset($mapping['price_number'])) {
+                $mapping['price_number'] = 'A';
+            }
+
             \Illuminate\Support\Facades\Log::info('Bordereau import mapping: ' . json_encode($mapping) . ' | lastHeaderRow: ' . $lastHeaderRowIndex);
 
             // Fallback sequential mapping if dynamic headers mapped less than 3 columns
@@ -402,16 +405,21 @@ class BordereauController extends Controller
                     continue;
                 }
 
-                $priceNumber = isset($mapping['price_number']) ? trim($row[$mapping['price_number']]) : null;
-                $description = isset($mapping['service_description']) ? trim($row[$mapping['service_description']]) : null;
+                $priceNumber = isset($mapping['price_number']) ? trim((string)($row[$mapping['price_number']] ?? '')) : null;
+                $description = isset($mapping['service_description']) ? trim((string)($row[$mapping['service_description']] ?? '')) : null;
 
                 // Skip completely empty rows
                 if (empty($priceNumber) && empty($description)) {
                     continue;
                 }
 
-                // Validation: Ignore rows where price number or description is empty
-                if (empty($priceNumber) || empty($description)) {
+                // If description exists but price_number is missing, generate a sequential number
+                if (empty($priceNumber) && !empty($description)) {
+                    $priceNumber = (string)($rowNumber + 1);
+                }
+
+                // Skip rows without a description (they are likely empty/separator rows)
+                if (empty($description)) {
                     continue;
                 }
 
