@@ -138,6 +138,22 @@ const MenusContent = () => {
   });
   const [saving, setSaving] = useState(false);
   const [showFicheTechnique, setShowFicheTechnique] = useState(false);
+  const [dailyIngredients, setDailyIngredients] = useState([]);
+
+  useEffect(() => {
+    const fetchDailySheets = async () => {
+      try {
+        const dateStr = daysInfo[selectedDayIndex]?.iso;
+        if (!dateStr) return;
+        const res = await api.get(`/technical-sheets?date=${dateStr}`);
+        setDailyIngredients(res.data || []);
+      } catch (err) {
+        console.error("Error fetching daily sheets", err);
+        setDailyIngredients([]);
+      }
+    };
+    fetchDailySheets();
+  }, [selectedDayIndex, weekStart, showFicheTechnique]); // re-fetch when showFicheTechnique closes (might have updated)
 
   useEffect(() => {
     fetchMenus(weekStart);
@@ -353,6 +369,42 @@ const MenusContent = () => {
   const getMealItems = (mealText) => mealTextToItems(mealText);
 
   const getIngredientNeeds = () => {
+    // Si nous avons des fiches techniques réelles pour ce jour, on les utilise
+    if (dailyIngredients && dailyIngredients.length > 0) {
+      const aggregated = new Map();
+      
+      dailyIngredients.forEach((sheet) => {
+        const platName = sheet.plat_name || 'Autre';
+        
+        if (aggregated.has(platName)) {
+          const prev = aggregated.get(platName);
+          aggregated.set(platName, {
+            ...prev,
+            calculated_quantity: prev.calculated_quantity + Number(sheet.calculated_quantity)
+          });
+        } else {
+          aggregated.set(platName, {
+            name: `Plat: ${platName}`,
+            calculated_quantity: Number(sheet.calculated_quantity)
+          });
+        }
+      });
+
+      return Array.from(aggregated.values()).map((plat) => {
+        const totalNeeded = plat.calculated_quantity;
+        const displayRaw = `${totalNeeded.toFixed(2)}`; // Pas d'unité fixe car c'est une somme mixte
+        
+        return {
+          name: plat.name,
+          raw: displayRaw,
+          stock: '—',
+          order: '—',
+          status: 'OK',
+        };
+      });
+    }
+
+    // Fallback: Si aucune fiche technique n'existe, on parse le texte du menu (ancien comportement)
     if (!selectedMenu) return [];
     const residents = selectedMenu.residents || 450;
 
@@ -739,14 +791,13 @@ const MenusContent = () => {
               display: 'flex', alignItems: 'center', gap: '10px',
               padding: '12px 28px', border: 'none',
               borderRadius: '12px',
-              background: 'linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%)',
+              background: 'linear-gradient(135deg, #0f766e 0%, #059669 100%)',
               color: 'white', fontSize: '14px', fontWeight: '700',
               cursor: 'pointer', transition: 'all 0.2s',
-              boxShadow: '0 8px 20px -4px rgba(124, 58, 237, 0.4)',
-              letterSpacing: '0.02em'
+              boxShadow: '0 8px 20px -4px rgba(15, 118, 110, 0.4)'
             }}
-            onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-2px)'}
-            onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
+            onMouseEnter={e => e.currentTarget.style.background = 'linear-gradient(135deg, #059669 0%, #0f766e 100%)'}
+            onMouseLeave={e => e.currentTarget.style.background = 'linear-gradient(135deg, #0f766e 0%, #059669 100%)'}
           >
             <FileText size={17} />
             Fiche Technique
@@ -1049,208 +1100,12 @@ const MenusContent = () => {
 
       {/* ── Modale Fiche Technique ── */}
       {showFicheTechnique && selectedMenu && (
-        <div style={{
-          position: 'fixed', inset: 0, backgroundColor: 'rgba(15,23,42,0.6)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          zIndex: 1000, backdropFilter: 'blur(4px)', padding: '24px'
-        }}>
-          <div style={{
-            backgroundColor: 'white', borderRadius: '20px', width: '100%',
-            maxWidth: '860px', maxHeight: '90vh', display: 'flex',
-            flexDirection: 'column', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)',
-            overflow: 'hidden'
-          }}>
-            {/* Header */}
-            <div style={{
-              background: 'linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%)',
-              padding: '24px 28px', display: 'flex', justifyContent: 'space-between', alignItems: 'center'
-            }}>
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
-                  <FileText size={22} color="white" />
-                  <h2 style={{ margin: 0, fontSize: '20px', fontWeight: '800', color: 'white' }}>Fiche Technique</h2>
-                </div>
-                <p style={{ margin: 0, fontSize: '13px', color: 'rgba(255,255,255,0.8)', fontWeight: '500' }}>
-                  {getSelectedDayFullText()} · {selectedMenu.residents} résidents
-                </p>
-              </div>
-              <button onClick={() => setShowFicheTechnique(false)}
-                style={{ background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: '10px', padding: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <X size={20} color="white" />
-              </button>
-            </div>
-
-            {/* Body */}
-            <div style={{ overflowY: 'auto', padding: '28px', display: 'flex', flexDirection: 'column', gap: '28px' }}>
-
-              {/* Petit-déjeuner */}
-              <div>
-                <div style={{
-                  display: 'flex', alignItems: 'center', gap: '10px',
-                  marginBottom: '14px', paddingBottom: '10px', borderBottom: '2px solid #fef3c7'
-                }}>
-                  <div style={{ backgroundColor: '#fef3c7', borderRadius: '10px', padding: '8px', display: 'flex' }}>
-                    <Coffee size={18} color="#d97706" />
-                  </div>
-                  <h3 style={{ margin: 0, fontSize: '15px', fontWeight: '800', color: '#b45309' }}>Petit-déjeuner</h3>
-                  <span style={{ marginLeft: 'auto', fontSize: '12px', color: '#b45309', fontWeight: '600', backgroundColor: '#fef3c7', padding: '3px 10px', borderRadius: '20px' }}>
-                    {getMealItems(selectedMenu.petit_dejeuner).length} produit(s)
-                  </span>
-                </div>
-                {getMealItems(selectedMenu.petit_dejeuner).length > 0 ? (
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
-                    <thead>
-                      <tr style={{ backgroundColor: '#fffbeb' }}>
-                        <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: '700', color: '#92400e', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em', borderRadius: '8px 0 0 8px' }}>#</th>
-                        <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: '700', color: '#92400e', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Produit</th>
-                        <th style={{ padding: '10px 12px', textAlign: 'center', fontWeight: '700', color: '#92400e', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Qté / personne</th>
-                        <th style={{ padding: '10px 12px', textAlign: 'right', fontWeight: '700', color: '#92400e', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em', borderRadius: '0 8px 8px 0' }}>Qté totale ({selectedMenu.residents} rés.)</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {getMealItems(selectedMenu.petit_dejeuner).map((item, i) => {
-                        const perPerson = parseQtyValue(item.qty);
-                        const total = Math.round(perPerson * (selectedMenu.residents || 450));
-                        return (
-                          <tr key={i} style={{ borderBottom: '1px solid #fef3c7' }}>
-                            <td style={{ padding: '12px', color: '#94a3b8', fontSize: '12px' }}>{i + 1}</td>
-                            <td style={{ padding: '12px', fontWeight: '600', color: '#1e293b' }}>{item.name}</td>
-                            <td style={{ padding: '12px', textAlign: 'center', color: '#d97706', fontWeight: '700' }}>{item.qty}</td>
-                            <td style={{ padding: '12px', textAlign: 'right', fontWeight: '700', color: '#0f172a' }}>{total.toLocaleString('fr-FR')}</td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                ) : (
-                  <p style={{ color: '#94a3b8', fontSize: '13px', fontStyle: 'italic' }}>Aucun produit enregistré.</p>
-                )}
-              </div>
-
-              {/* Déjeuner */}
-              <div>
-                <div style={{
-                  display: 'flex', alignItems: 'center', gap: '10px',
-                  marginBottom: '14px', paddingBottom: '10px', borderBottom: '2px solid #e0f2fe'
-                }}>
-                  <div style={{ backgroundColor: '#e0f2fe', borderRadius: '10px', padding: '8px', display: 'flex' }}>
-                    <Utensils size={18} color="#0284c7" />
-                  </div>
-                  <h3 style={{ margin: 0, fontSize: '15px', fontWeight: '800', color: '#0369a1' }}>Déjeuner</h3>
-                  <span style={{ marginLeft: 'auto', fontSize: '12px', color: '#0369a1', fontWeight: '600', backgroundColor: '#e0f2fe', padding: '3px 10px', borderRadius: '20px' }}>
-                    {getMealItems(selectedMenu.dejeuner).length} produit(s)
-                  </span>
-                </div>
-                {getMealItems(selectedMenu.dejeuner).length > 0 ? (
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
-                    <thead>
-                      <tr style={{ backgroundColor: '#f0f9ff' }}>
-                        <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: '700', color: '#0c4a6e', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>#</th>
-                        <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: '700', color: '#0c4a6e', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Produit</th>
-                        <th style={{ padding: '10px 12px', textAlign: 'center', fontWeight: '700', color: '#0c4a6e', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Qté / personne</th>
-                        <th style={{ padding: '10px 12px', textAlign: 'right', fontWeight: '700', color: '#0c4a6e', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Qté totale ({selectedMenu.residents} rés.)</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {getMealItems(selectedMenu.dejeuner).map((item, i) => {
-                        const perPerson = parseQtyValue(item.qty);
-                        const total = Math.round(perPerson * (selectedMenu.residents || 450));
-                        return (
-                          <tr key={i} style={{ borderBottom: '1px solid #e0f2fe' }}>
-                            <td style={{ padding: '12px', color: '#94a3b8', fontSize: '12px' }}>{i + 1}</td>
-                            <td style={{ padding: '12px', fontWeight: '600', color: '#1e293b' }}>{item.name}</td>
-                            <td style={{ padding: '12px', textAlign: 'center', color: '#0284c7', fontWeight: '700' }}>{item.qty}</td>
-                            <td style={{ padding: '12px', textAlign: 'right', fontWeight: '700', color: '#0f172a' }}>{total.toLocaleString('fr-FR')}</td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                ) : (
-                  <p style={{ color: '#94a3b8', fontSize: '13px', fontStyle: 'italic' }}>Aucun produit enregistré.</p>
-                )}
-              </div>
-
-              {/* Dîner */}
-              <div>
-                <div style={{
-                  display: 'flex', alignItems: 'center', gap: '10px',
-                  marginBottom: '14px', paddingBottom: '10px', borderBottom: '2px solid #f3e8ff'
-                }}>
-                  <div style={{ backgroundColor: '#f3e8ff', borderRadius: '10px', padding: '8px', display: 'flex' }}>
-                    <Moon size={18} color="#7c3aed" />
-                  </div>
-                  <h3 style={{ margin: 0, fontSize: '15px', fontWeight: '800', color: '#6d28d9' }}>Dîner</h3>
-                  <span style={{ marginLeft: 'auto', fontSize: '12px', color: '#6d28d9', fontWeight: '600', backgroundColor: '#f3e8ff', padding: '3px 10px', borderRadius: '20px' }}>
-                    {getMealItems(selectedMenu.diner).length} produit(s)
-                  </span>
-                </div>
-                {getMealItems(selectedMenu.diner).length > 0 ? (
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
-                    <thead>
-                      <tr style={{ backgroundColor: '#faf5ff' }}>
-                        <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: '700', color: '#4c1d95', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>#</th>
-                        <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: '700', color: '#4c1d95', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Produit</th>
-                        <th style={{ padding: '10px 12px', textAlign: 'center', fontWeight: '700', color: '#4c1d95', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Qté / personne</th>
-                        <th style={{ padding: '10px 12px', textAlign: 'right', fontWeight: '700', color: '#4c1d95', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Qté totale ({selectedMenu.residents} rés.)</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {getMealItems(selectedMenu.diner).map((item, i) => {
-                        const perPerson = parseQtyValue(item.qty);
-                        const total = Math.round(perPerson * (selectedMenu.residents || 450));
-                        return (
-                          <tr key={i} style={{ borderBottom: '1px solid #f3e8ff' }}>
-                            <td style={{ padding: '12px', color: '#94a3b8', fontSize: '12px' }}>{i + 1}</td>
-                            <td style={{ padding: '12px', fontWeight: '600', color: '#1e293b' }}>{item.name}</td>
-                            <td style={{ padding: '12px', textAlign: 'center', color: '#7c3aed', fontWeight: '700' }}>{item.qty}</td>
-                            <td style={{ padding: '12px', textAlign: 'right', fontWeight: '700', color: '#0f172a' }}>{total.toLocaleString('fr-FR')}</td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                ) : (
-                  <p style={{ color: '#94a3b8', fontSize: '13px', fontStyle: 'italic' }}>Aucun produit enregistré.</p>
-                )}
-              </div>
-
-            </div>
-
-            {/* Footer */}
-            <div style={{
-              padding: '16px 28px', borderTop: '1px solid #e2e8f0',
-              display: 'flex', justifyContent: 'flex-end', gap: '12px',
-              backgroundColor: '#f8fafc'
-            }}>
-              <button
-                onClick={() => window.print()}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: '8px',
-                  padding: '10px 20px', border: '1px solid #cbd5e1',
-                  borderRadius: '10px', backgroundColor: 'white',
-                  color: '#334155', fontSize: '13px', fontWeight: '600',
-                  cursor: 'pointer'
-                }}
-              >
-                <Printer size={15} /> Imprimer
-              </button>
-              <button
-                onClick={() => setShowFicheTechnique(false)}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: '8px',
-                  padding: '10px 20px', border: 'none',
-                  borderRadius: '10px',
-                  background: 'linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%)',
-                  color: 'white', fontSize: '13px', fontWeight: '600',
-                  cursor: 'pointer'
-                }}
-              >
-                <X size={15} /> Fermer
-              </button>
-            </div>
-          </div>
-        </div>
+        <FicheTechniqueModal
+          selectedMenu={selectedMenu}
+          date={selectedMenu.date}
+          dayText={getSelectedDayFullText()}
+          onClose={() => setShowFicheTechnique(false)}
+        />
       )}
 
   </div>

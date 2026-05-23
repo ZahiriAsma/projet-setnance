@@ -45,4 +45,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/technical-sheets', [\App\Http\Controllers\TechnicalSheetController::class, 'index']);
     Route::post('/technical-sheets', [\App\Http\Controllers\TechnicalSheetController::class, 'store']);
     Route::delete('/technical-sheets/{id}', [\App\Http\Controllers\TechnicalSheetController::class, 'destroy']);
+    Route::get('/technical-sheets/ingredients', [\App\Http\Controllers\TechnicalSheetController::class, 'allIngredients']);
+    Route::get('/technical-sheets/bordereau-headers', [\App\Http\Controllers\TechnicalSheetController::class, 'bordereauHeaders']);
 });

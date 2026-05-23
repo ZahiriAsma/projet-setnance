@@ -14,7 +14,9 @@ class TechnicalSheet extends Model
     protected $casts = [
         'date' => 'date',
         'max_quantity' => 'decimal:2',
+        'quantity_per_person' => 'decimal:4',
         'calculated_quantity' => 'decimal:2',
+        'r' => 'decimal:4',
         'pu_r' => 'decimal:2',
         'amount' => 'decimal:2',
     ];

@@ -1,0 +1,154 @@
+/* DailyMealModal.css – Premium dark‑theme styling matching the project aesthetic */
+
+/* Overlay covers the whole viewport with a translucent dark backdrop */
+.daily-meal-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+/* Card appears as a glass‑morphic dark panel */
+.daily-meal-modal-card {
+  background: rgba(5, 15, 28, 0.93);
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
+  padding: 2rem 1.5rem;
+  width: 92%;
+  max-width: 960px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+  color: #fff;
+  position: relative;
+}
+
+/* Close button – teal accent */
+.daily-meal-modal-card .close-btn {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: transparent;
+  border: none;
+  color: #2f9e44;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+.daily-meal-modal-card .close-btn:hover {
+  color: #4ade80;
+}
+
+.modal-title {
+  font-family: 'Inter', sans-serif;
+  font-size: 1.75rem;
+  font-weight: 600;
+  margin-bottom: 1.5rem;
+  text-align: center;
+  color: #2f9e44;
+}
+
+/* Meal sections */
+.meal-section {
+  margin-bottom: 2rem;
+  border: 1px solid #1e293b;
+  border-radius: 8px;
+  background: rgba(10, 22, 38, 0.6);
+  padding: 1rem;
+}
+
+.meal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+.meal-header h3 {
+  font-size: 1.2rem;
+  font-weight: 500;
+  color: #2f9e44;
+  text-transform: capitalize;
+  margin: 0;
+}
+
+.people-input label {
+  font-size: 0.9rem;
+  margin-right: 0.4rem;
+  color: #cbd5e1;
+}
+.people-input input {
+  width: 4rem;
+  padding: 0.2rem 0.4rem;
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 4px;
+  color: #fff;
+  text-align: center;
+}
+.people-input input:focus {
+  outline: none;
+  border-color: #2f9e44;
+}
+
+/* Table of products for each meal */
+.meal-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+.meal-table th,
+.meal-table td {
+  padding: 0.45rem 0.6rem;
+  border: 1px solid #334155;
+  text-align: left;
+}
+.meal-table th {
+  background: #2f9e44;
+  color: #fff;
+  font-weight: 600;
+}
+.meal-table td {
+  background: rgba(26, 46, 69, 0.7);
+  color: #e2e8f0;
+}
+.meal-table input[type='number'] {
+  width: 4rem;
+  padding: 0.2rem;
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 4px;
+  color: #fff;
+  text-align: right;
+}
+.meal-table input[type='number']:focus {
+  outline: none;
+  border-color: #2f9e44;
+}
+
+/* Action buttons */
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.8rem;
+  margin-top: 1rem;
+}
+.actions .save-btn {
+  display: flex;
+  align-items: center;
+  background: #2f9e44;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 0.45rem 1rem;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+.actions .save-btn:hover {
+  background: #4ade80;
+}
+.actions .save-btn .btn-icon {
+  margin-right: 0.4rem;
+}
