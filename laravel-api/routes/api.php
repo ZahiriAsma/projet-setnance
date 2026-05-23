@@ -16,6 +16,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Marches routes
     Route::get('/marches', [MarcheController::class, 'index']);
     Route::post('/marches', [MarcheController::class, 'store']);
+    Route::post('/marches/{id}/archive', [MarcheController::class, 'archive']);
 
     // Fournisseurs routes
     Route::apiResource('fournisseurs', \App\Http\Controllers\Api\FournisseurController::class);
@@ -39,4 +40,9 @@ Route::middleware('auth:sanctum')->group(function () {
     // Attachment BC routes
     Route::get('/bons-livraison/{id}/attachments-bc/export', [\App\Http\Controllers\Api\AttachmentBcController::class, 'export']);
     Route::apiResource('attachments-bc', \App\Http\Controllers\Api\AttachmentBcController::class);
+
+    // Technical Sheets routes
+    Route::get('/technical-sheets', [\App\Http\Controllers\TechnicalSheetController::class, 'index']);
+    Route::post('/technical-sheets', [\App\Http\Controllers\TechnicalSheetController::class, 'store']);
+    Route::delete('/technical-sheets/{id}', [\App\Http\Controllers\TechnicalSheetController::class, 'destroy']);
 });

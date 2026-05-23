@@ -57,10 +57,9 @@ const MarchesContent = () => {
   const [showModal, setShowModal] = useState(false);
   const [formData, setFormData] = useState({
     titulaire: '',
-    id_fournisseur: '',
-    date_debut: '',
-    date_fin: ''
+    id_fournisseur: ''
   });
+  const [activeMarchesTab, setActiveMarchesTab] = useState('actifs');
   const [submitting, setSubmitting] = useState(false);
   const [selectedMarche, setSelectedMarche] = useState(() => {
     const saved = localStorage.getItem('selectedMarche');
@@ -401,13 +400,25 @@ const MarchesContent = () => {
 
       await api.post('/marches', payload);
       setShowModal(false);
-      setFormData({ titulaire: '', id_fournisseur: fournisseurs[0]?.id?.toString() || '', date_debut: '', date_fin: '' });
+      setFormData({ titulaire: '', id_fournisseur: fournisseurs[0]?.id?.toString() || '' });
       fetchMarches(); // Refresh
     } catch (error) {
       console.error('Erreur lors de l\'ajout', error.response || error);
       alert("Erreur: " + (error.response?.data?.message || error.message));
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleArchiveMarche = async (id) => {
+    if (window.confirm('Voulez-vous vraiment archiver ce marché ?')) {
+      try {
+        await api.post(`/marches/${id}/archive`);
+        fetchMarches();
+      } catch (error) {
+        console.error('Erreur lors de l\'archivage', error);
+        alert('Erreur lors de l\'archivage.');
+      }
     }
   };
 
@@ -2174,13 +2185,39 @@ const MarchesContent = () => {
             })}
           </div>
 
+          {/* Tabs: Actifs / Archivés */}
+          <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
+            <button
+              onClick={() => setActiveMarchesTab('actifs')}
+              style={{
+                padding: '8px 20px', borderRadius: '8px', border: 'none', fontWeight: '700',
+                cursor: 'pointer', fontSize: '13px', transition: 'all 0.2s',
+                backgroundColor: activeMarchesTab === 'actifs' ? '#0f766e' : '#e2e8f0',
+                color: activeMarchesTab === 'actifs' ? 'white' : '#475569'
+              }}
+            >
+               Marchés Actifs ({marches.filter(m => !m.is_archived).length})
+            </button>
+            <button
+              onClick={() => setActiveMarchesTab('archives')}
+              style={{
+                padding: '8px 20px', borderRadius: '8px', border: 'none', fontWeight: '700',
+                cursor: 'pointer', fontSize: '13px', transition: 'all 0.2s',
+                backgroundColor: activeMarchesTab === 'archives' ? '#64748b' : '#e2e8f0',
+                color: activeMarchesTab === 'archives' ? 'white' : '#475569'
+              }}
+            >
+               Marchés Archivés ({marches.filter(m => m.is_archived).length})
+            </button>
+          </div>
+
           {/* Grid of Marches */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' }}>
 
             {loading ? (
               <p>Chargement des marchés...</p>
             ) : (
-              marches.map((marche) => {
+              (activeMarchesTab === 'actifs' ? marches.filter(m => !m.is_archived) : marches.filter(m => m.is_archived)).map((marche) => {
                 const statusStyle = getStatusColor(marche.statut);
                 return (
                   <div key={marche.id} style={{
@@ -2224,9 +2261,20 @@ const MarchesContent = () => {
                     </div>
 
                     <div style={{ display: 'flex', gap: '12px' }}>
-                      <button className="btn-secondary" style={{ flex: 1, padding: '8px', justifyContent: 'center' }}>
-                        <Archive size={14} /> Archive
-                      </button>
+                      {!marche.is_archived && (
+                        <button
+                          onClick={() => handleArchiveMarche(marche.id)}
+                          className="btn-secondary"
+                          style={{ flex: 1, padding: '8px', justifyContent: 'center', display: 'flex', alignItems: 'center', gap: '6px', color: '#64748b', borderColor: '#cbd5e1' }}
+                        >
+                          <Archive size={14} /> Archiver
+                        </button>
+                      )}
+                      {marche.is_archived && (
+                        <div style={{ flex: 1, padding: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', backgroundColor: '#f1f5f9', borderRadius: '8px', fontSize: '12px', fontWeight: '600', color: '#94a3b8' }}>
+                          Archivé le {marche.archived_at ? new Date(marche.archived_at).toLocaleDateString('fr-FR') : '—'}
+                        </div>
+                      )}
                       <button
                         onClick={() => setSelectedMarche(marche)}
                         className="btn-primary"
@@ -2240,20 +2288,22 @@ const MarchesContent = () => {
               })
             )}
 
-            {/* Add New Card Button */}
-            <div
-              onClick={() => setShowModal(true)}
-              style={{
-                borderRadius: '16px', border: '2px dashed #cbd5e1', display: 'flex', flexDirection: 'column',
-                alignItems: 'center', justifyContent: 'center', minHeight: '260px', cursor: 'pointer',
-                backgroundColor: 'rgba(248,250,252,0.5)', transition: 'all 0.2s'
-              }}
-            >
-              <div style={{ width: '48px', height: '48px', backgroundColor: '#e2e8f0', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '12px' }}>
-                <Plus size={24} color="#64748b" />
+            {/* Add New Card Button - only on active tab */}
+            {activeMarchesTab === 'actifs' && (
+              <div
+                onClick={() => setShowModal(true)}
+                style={{
+                  borderRadius: '16px', border: '2px dashed #cbd5e1', display: 'flex', flexDirection: 'column',
+                  alignItems: 'center', justifyContent: 'center', minHeight: '260px', cursor: 'pointer',
+                  backgroundColor: 'rgba(248,250,252,0.5)', transition: 'all 0.2s'
+                }}
+              >
+                <div style={{ width: '48px', height: '48px', backgroundColor: '#e2e8f0', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '12px' }}>
+                  <Plus size={24} color="#64748b" />
+                </div>
+                <div style={{ fontSize: '14px', fontWeight: '600', color: '#475569' }}>Nouveau marché</div>
               </div>
-              <div style={{ fontSize: '14px', fontWeight: '600', color: '#475569' }}>Nouveau marché</div>
-            </div>
+            )}
 
           </div>
 
@@ -2340,21 +2390,9 @@ const MarchesContent = () => {
                 </select>
               </div>
 
-              <div style={{ display: 'flex', gap: '16px' }}>
-                <div style={{ flex: 1 }}>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#475569', marginBottom: '6px' }}>Date de début</label>
-                  <input
-                    type="date" name="date_debut" value={formData.date_debut} onChange={handleInputChange} required
-                    style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none' }}
-                  />
-                </div>
-                <div style={{ flex: 1 }}>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#475569', marginBottom: '6px' }}>Date de fin</label>
-                  <input
-                    type="date" name="date_fin" value={formData.date_fin} onChange={handleInputChange} required
-                    style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none' }}
-                  />
-                </div>
+              {/* Dates are now auto-generated by the backend */}
+              <div style={{ padding: '10px 14px', backgroundColor: '#f0fdf4', borderRadius: '8px', border: '1px solid #bbf7d0', fontSize: '13px', color: '#15803d', fontWeight: '500' }}>
+                 La date de début sera automatiquement définie à aujourd'hui et la date de fin dans 3 ans.
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '16px' }}>

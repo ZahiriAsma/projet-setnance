@@ -6,6 +6,7 @@ import {
 import api from '../api/axios';
 import { useDashboard } from '../context/DashboardContext';
 import { analyzeMenuBudget, MENU_PRICE_LIMIT_DH } from '../utils/menuPrices';
+import FicheTechniqueModal from './FicheTechniqueModal';
 
 const formatDateISO = (date) => {
   const y = date.getFullYear();

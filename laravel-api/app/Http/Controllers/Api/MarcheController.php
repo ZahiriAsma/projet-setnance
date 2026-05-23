@@ -5,12 +5,20 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Marche;
 use Illuminate\Http\Request;
-use Illuminate\Validation\ValidationException;
 
 class MarcheController extends Controller
 {
     public function index()
     {
+        // Auto-archive logic
+        Marche::where('is_archived', false)
+            ->whereDate('date_fin', '<', now())
+            ->update([
+                'is_archived' => true,
+                'archived_at' => now(),
+                'statut' => 'Archivé'
+            ]);
+
         return response()->json(Marche::orderBy('created_at', 'desc')->get());
     }
 
@@ -19,12 +27,15 @@ class MarcheController extends Controller
         $request->validate([
             'titulaire' => 'required|string|max:255',
             'id_fournisseur' => 'required|integer',
-            'date_debut' => 'required|date',
-            'date_fin' => 'required|date|after_or_equal:date_debut',
         ]);
 
-        // Default values for mocked UI features
         $data = $request->all();
+        
+        // Auto-date logic
+        $data['date_debut'] = now()->toDateString();
+        $data['date_fin'] = now()->addYears(3)->toDateString();
+
+        // Default values for mocked UI features
         if (!isset($data['budget'])) {
             $data['budget'] = rand(20000, 150000); // Random budget for demonstration
         }
@@ -38,5 +49,16 @@ class MarcheController extends Controller
         $marche = Marche::create($data);
 
         return response()->json($marche, 201);
+    }
+
+    public function archive($id)
+    {
+        $marche = Marche::findOrFail($id);
+        $marche->is_archived = true;
+        $marche->archived_at = now();
+        $marche->statut = 'Archivé';
+        $marche->save();
+
+        return response()->json(['message' => 'Marche archived successfully', 'marche' => $marche]);
     }
 }

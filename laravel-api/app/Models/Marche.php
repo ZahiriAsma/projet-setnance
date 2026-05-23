@@ -16,7 +16,16 @@ class Marche extends Model
         'date_fin',
         'budget',
         'consomme',
-        'statut'
+        'statut',
+        'is_archived',
+        'archived_at'
+    ];
+
+    protected $casts = [
+        'is_archived' => 'boolean',
+        'archived_at' => 'datetime',
+        'date_debut' => 'date',
+        'date_fin' => 'date',
     ];
 
     public function bordereauHeader()
