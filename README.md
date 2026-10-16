@@ -1,7 +1,6 @@
-# Projet Setnance
+# Projet 
 
-[Une phrase qui explique ce que fait l'application, par exemple : application web de gestion de ... permettant de ...]
-
+Application de gestion de stock
 ## Fonctionnalités
 
 - [Fonctionnalité 1, ex. inscription et connexion des utilisateurs]
